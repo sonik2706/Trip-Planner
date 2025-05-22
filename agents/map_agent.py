@@ -8,8 +8,8 @@ import json
 import requests as r
 from typing import Dict, List, Literal
 from urllib.parse import quote_plus
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
-from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate, load_prompt
 
 from settings.config import config
@@ -39,16 +39,19 @@ class MapAgent:
         ]
 
     def _setup_llm(self, model_temperature: float = 0.0):
-        self._llm = ChatOpenAI(
-            model=config.LLM_MODEL,
-            temperature=model_temperature,
-            api_key=config.OPENAI_API_KEY,
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            google_api_key=config.GEMINI_API_KEY,
+            temperature=0.3,
+            top_k=40,
+            top_p=0.95,
+            verbose=True,
         )
 
     def _setup_agent(self):
         self.agent = initialize_agent(
             tools=self.tools,
-            llm=self._llm,
+            llm=self.llm,
             agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
             verbose=True,
         )

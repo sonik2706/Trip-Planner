@@ -10,7 +10,6 @@ from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):
-    OPENAI_API_KEY: str
     GEMINI_API_KEY: str
     TAVILY_API_KEY: str
     LLM_MODEL: str
