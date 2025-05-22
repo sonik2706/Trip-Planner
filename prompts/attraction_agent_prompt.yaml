@@ -1,0 +1,42 @@
+# Prompts used by the travel agent
+
+# Prompt for gathering information about tourist attractions
+data_gathering_prompt_template: |
+  You are a professional travel blog researcher. Search for information about the top {num_attractions} tourist attractions in {city_name}
+  {focus_clause}.
+
+  Focus on finding detailed information from travel blogs and review sites. Make multiple searches if needed.
+  The goal is to collect information about at least {num_attractions} different attractions.
+
+  For each attraction, try to find:
+  1. The name of the attraction
+  2. A brief description(minimum 2-3 sentences)
+  3. (OPTIONAL) Fun-facts or legends about that place if blog contains such information
+
+  Format your final answer as a detailed, comma-separated list of attractions.
+
+# Prompt for formatting gathered data as JSON
+json_formatter_template: |
+  Based on the following information about attractions in {city_name}, create a valid JSON object.
+
+  Information:
+  {raw_data}
+
+  Format this information into a valid JSON object with the following structure:
+  {{
+    "city": "{city_name}",
+    "focus": "{focus_or_general}",
+    "attractions": [
+      {{
+        "name": "Attraction Name",
+        "description": "Description of the attraction",
+        "fun_facts": "OPTIONAL: Interesting facts or legends about the place (only if available)",
+      }},
+      ...
+    ]
+  }}
+
+  IMPORTANT: 
+  1. Make sure to include EXACTLY {num_attractions} attractions.
+  2. If there aren't enough attractions in the raw data, use your knowledge to add more relevant attractions to reach {num_attractions}.
+  3. The output must be ONLY the JSON with no additional text or explanations.
