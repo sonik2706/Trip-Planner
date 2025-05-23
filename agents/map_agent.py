@@ -8,6 +8,7 @@ import json
 import requests as r
 from typing import Dict, List, Literal
 from urllib.parse import quote_plus
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate, load_prompt
@@ -33,8 +34,16 @@ class MapAgent:
         self.tools = [
             Tool(
                 name="get_eta",
-                func=lambda *args, **kwargs: self.get_eta(*args, **kwargs),
-                description=self.get_eta.__doc__
+                func=self._get_eta_from_string,
+                description=(
+                    "Estimate travel time and distance between two locations. "
+                    "Input should be a string like: 'from X to Y using walking|driving|transit'"
+                )
+            ),
+            Tool(
+                name="get_coordinates",
+                func=self.get_coordinates,
+                description="Get latitude and longitude of a location. Input should be a location name or address like 'Colosseum, Rome'."
             )
         ]
 
@@ -56,6 +65,26 @@ class MapAgent:
             verbose=True,
         )
 
+    def _get_eta_from_string(self, query: str) -> str:
+        """
+        Parse a natural language input and extract origin, destination, and mode
+        Example format: 'from PJATK to Old Town Market Square using walking'
+        """
+        import re
+        pattern = r"from (.+?) to (.+?) using (walking|driving|transit)"
+        match = re.search(pattern, query.strip(), re.IGNORECASE)
+
+        if not match:
+            return (
+                "Invalid input. Use format like: 'from Colosseum to Pantheon using walking'."
+            )
+
+        origin = match.group(1).strip()
+        destination = match.group(2).strip()
+        mode = match.group(3).strip().lower()
+        
+        return self.get_eta(origin, destination, mode)
+
     def get_eta(self, origin: str, destination: str, mode: Literal["walking", "driving", "transit"]) -> str:
         """
         Estimate travel time and distance between two locations using the Google Maps Distance Matrix API.
@@ -69,15 +98,18 @@ class MapAgent:
             str: A formatted string showing the estimated travel time and distance.
         """
         try:
+
+            print(origin, destination)
             query = (
                 f"https://maps.googleapis.com/maps/api/distancematrix/json"
-                f"?origins={origin}&destinations={destination}&mode={mode}"
+                f"?origins={quote_plus(origin)}&destinations={quote_plus(destination)}&mode={mode}"
                 f"&key={config.DISTANCE_MATRIX_API_KEY}"
             )
+            print(query)
             response = r.get(query)
-
-            data = response.json()
             
+            data = response.json()
+            print(data)
             element = data["rows"][0]["elements"][0]
             if element.get("status") != "OK":
                 return f"Could not get ETA between {origin} and {destination}."
@@ -88,6 +120,36 @@ class MapAgent:
             return f"Estimated time: {duration}, Distance: {distance}, between {origin} and {destination}."
         except Exception as e:
             return f"Error finding ETA between {origin} and {destination}: {str(e)}"
+
+    def get_coordinates(self, location: str) -> str:
+        """
+        Get the geographic coordinates (latitude and longitude) of a location using Google Maps Geocoding API.
+
+        Args:
+            location (str): The name or address of the location (e.g., "Colosseum, Rome").
+
+        Returns:
+            str: A formatted string with latitude and longitude, or an error message.
+        """
+        try:
+            encoded_location = quote_plus(location)
+            url = (
+                f"https://maps.googleapis.com/maps/api/geocode/json"
+                f"?address={encoded_location}&key={config.DISTANCE_MATRIX_API_KEY}"
+            )
+            response = r.get(url)
+            data = response.json()
+
+            if data["status"] != "OK":
+                return f"Could not get coordinates for {location}."
+
+            result = data["results"][0]["geometry"]["location"]
+            lat = result["lat"]
+            lng = result["lng"]
+
+            return f"{location} -> Latitude: {lat}, Longitude: {lng}"
+        except Exception as e:
+            return f"Error finding coordinates for {location}: {str(e)}"
 
     def generate_google_maps_link(self, attractions: list) -> str:
         """

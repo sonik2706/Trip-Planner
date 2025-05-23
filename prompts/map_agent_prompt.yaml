@@ -12,11 +12,14 @@ template: |
   {list_attractions}
 
   Your task:
-  1. Use the `get_eta` tool to find travel time and distance from the accommodation to each attraction.
-  2. Organize the attractions into an optimized day-by-day itinerary:
-      - Minimize travel time and maximize enjoyment.
-      - Group nearby attractions together.
-      - Prioritize attractions closest to the hotel.
-      - Respect the user's travel mode preference ({focus}).
-  3. If there are more attractions than can be reasonably visited in the given number of days, exclude some with clear justification.
-  4. Spread the attractions across the available {days} days as efficiently as possible.
+  1. Use the `get_coordinates` tool to fetch the coordinates (latitude and longitude) of the accommodation and each attraction.
+  2. Use the `get_eta` tool to calculate travel time and distance:
+     - From the accommodation to the first attraction of the day.
+     - Then from one attraction to the next in sequence (do NOT return to the accommodation each time).
+  3. Organize the attractions into an optimized day-by-day itinerary:
+     - Minimize total travel time and maximize enjoyment.
+     - Group geographically close attractions together based on coordinates.
+     - Start each day from the accommodation, then optimize travel path forward.
+     - Respect the user's travel mode preference ({focus}).
+  4. If there are more attractions than can be reasonably visited in the given number of days, exclude some and explain why as comments in the JSON.
+  5. Output the **final plan only** in valid JSON format. Do not include any explanations or extra text.
