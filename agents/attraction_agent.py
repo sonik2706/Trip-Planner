@@ -61,14 +61,16 @@ class AttractionAgent:
         self, city_name: str, num_attractions: int, focus: Optional[str] = None
     ) -> str:
         """
-        Find top tourist attractions in a specified city.
+        Retrieve top tourist attractions in a city, optionally filtered by focus.
 
         Args:
+            city_name (str): City to search attractions in.
+            num_attractions (int): Number of attractions to return.
+            focus (Optional[str], optional): Theme to filter attractions. Defaults to None.
 
         Returns:
-        
+            str: JSON string with attraction details.
         """
-
         # Format the focus clause for the prompt
         focus_clause = f" related to {focus}" if focus else ""
 
