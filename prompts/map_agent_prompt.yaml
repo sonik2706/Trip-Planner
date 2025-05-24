@@ -5,21 +5,39 @@ template: |
   "{accomodation_address}"
 
   The focus of the trip is on **{focus}** travel mode (e.g., walking, transit, or driving).
-
   The total number of available days is: {days}
 
   The following attractions are candidates for visiting:
   {list_attractions}
 
   Your task:
-  1. Use the `get_coordinates` tool to fetch the coordinates (latitude and longitude) of the accommodation and each attraction.
-  2. Use the `get_eta` tool to calculate travel time and distance:
-     - From the accommodation to the first attraction of the day.
-     - Then from one attraction to the next in sequence (do NOT return to the accommodation each time).
-  3. Organize the attractions into an optimized day-by-day itinerary:
-     - Minimize total travel time and maximize enjoyment.
-     - Group geographically close attractions together based on coordinates.
-     - Start each day from the accommodation, then optimize travel path forward.
-     - Respect the user's travel mode preference ({focus}).
-  4. If there are more attractions than can be reasonably visited in the given number of days, exclude some and explain why as comments in the JSON.
-  5. Output the **final plan only** in valid JSON format. Do not include any explanations or extra text.
+  1. Use the `get_all_coordinates` tool once to retrieve coordinates (latitude and longitude) for all locations, including the accommodation.
+
+  After that:
+  - Cluster attractions geographically based on coordinate proximity.
+  - For each day, create a route that starts at the accommodation and proceeds to the closest next attraction, continuing forward without backtracking.
+  - Minimize the total travel distance for each day using spatial reasoning.
+  - Generate a Google Maps route link using the `generate_google_maps_link` tool for each day's ordered attractions.
+  - Return the result in valid JSON format using the structure below.
+
+  Guidelines:
+  - Respect the user's preferred travel mode ({focus}).
+  - Distribute the attractions evenly across the available {days} days.
+  - If too many attractions exist, omit the least conveniently located ones and include an inline comment justifying their removal in the JSON.
+
+  Output format:
+  {{
+    "days": [
+      {{
+        "day": 1,
+        "attractions": [
+          {{ "name": "Colosseum" }},
+          {{ "name": "Roman Forum" }}
+        ],
+        "map_link": "https://www.google.com/maps/dir/Colosseum/Roman+Forum"
+      }},
+      ...
+    ]
+  }}
+
+  Do not include any extra explanation. Return only the valid JSON.

@@ -42,8 +42,17 @@ class MapAgent:
             ),
             Tool(
                 name="get_coordinates",
-                func=self.get_coordinates,
-                description="Get latitude and longitude of a location. Input should be a location name or address like 'Colosseum, Rome'."
+                func=self.get_all_coordinates,
+                description=(
+                    "Get the coordinates (latitude and longitude) for multiple locations. "
+                    "Input should be a comma-separated list of location names or addresses (e.g., 'Colosseum, Rome, Pantheon, Rome'). "
+                    "Returns a list of results like: 'Colosseum: 41.89, 12.49'."
+                )
+            ),
+            Tool(
+                name="generate_google_maps_link",
+                func=self.generate_google_maps_link,
+                description="Generate a Google Maps route link from a comma-separated list of location names (e.g., 'Colosseum, Pantheon, Roman Forum')."
             )
         ]
 
@@ -137,6 +146,7 @@ class MapAgent:
                 f"https://maps.googleapis.com/maps/api/geocode/json"
                 f"?address={encoded_location}&key={config.DISTANCE_MATRIX_API_KEY}"
             )
+
             response = r.get(url)
             data = response.json()
 
@@ -151,24 +161,43 @@ class MapAgent:
         except Exception as e:
             return f"Error finding coordinates for {location}: {str(e)}"
 
-    def generate_google_maps_link(self, attractions: list) -> str:
+    def get_all_coordinates(self, locations_str: str) -> str:
         """
-        Generate a google maps link using the provided attractions list
+        Accepts a comma-separated list of location names and returns their coordinates.
+        """
+        locations = [loc.strip() for loc in locations_str.split(",")]
+        results = []
+        for loc in locations:
+            try:
+                coords = self.get_coordinates(loc)
+                results.append(f"{loc}: {coords}")
+            except Exception as e:
+                results.append(f"{loc}: ERROR - {str(e)}")
+        return "\n".join(results)
+
+    def generate_google_maps_link(self, attractions_str: str) -> str:
+        """
+        Generate a Google Maps route link from a string of attraction names.
 
         Args:
-            attractions(list): An ordered list of attractions to be visited
+            attractions_str (str): A comma- or newline-separated list of location names.
 
         Returns:
-            str: Link to google maps with all the destinations.
+            str: Google Maps link with route through these locations.
         """
+        attractions = [item.strip() for item in attractions_str.split(",") if item.strip()]
+    
+        if not attractions:
+            return "No valid attractions provided."
+
         base_url = "https://www.google.com/maps/dir/"
 
         # Ensure each attraction is converted to a string before applying quote_plus
         return base_url + "/".join(
             quote_plus(str(attraction)) for attraction in attractions
-        )
+        ) + f"&travelmode=transit"
 
-    def optimize(self, city: str, days: int, accomodation_address: str,list_attractions: list) -> Dict:
+    def optimize(self, city: str, days: int, accomodation_address: str,list_attractions: list, focus: Literal["walking", "driving", "transit"] = "transit") -> Dict:
         """
         Generate an optimized itinerary by estimating ETAs from the accommodation to each attraction.
 
@@ -183,17 +212,12 @@ class MapAgent:
         """
         prompt = self.prompts['template'].format(
             city=city,
-            focus="walking",
+            focus=focus,
             days=days,
             accomodation_address=accomodation_address,
             list_attractions="\n".join(f"- {place}" for place in list_attractions)
         )
 
         response = self.agent.invoke(prompt)
-        
-        try:
-            data = json.dumps(response)
-            print(data["Final Answer"])
-        except:
-            pass
-   
+
+        return response

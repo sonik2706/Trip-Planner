@@ -24,7 +24,10 @@ if __name__ == "__main__":
         "Vistula Boulevards",
         "Neon Museum"
     ]
-    response = agent.optimize("Warsaw", 3, "PJATK", warsaw_attractions)
-
     # print(agent.get_eta("Warsaw","Royal Castle", "PJATK", "walking"))
+
+    # print(agent.get_coordinates("Złote Tarasy"))
+
+    response = agent.optimize("Warsaw", 3, "PJATK", warsaw_attractions)
+    print(response)
     
