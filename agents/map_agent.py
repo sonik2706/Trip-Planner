@@ -9,6 +9,7 @@ import requests as r
 from typing import Dict, List, Literal
 from urllib.parse import quote_plus
 
+from agents.utils.prompt import load_prompts
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate, load_prompt
@@ -17,17 +18,10 @@ from langchain.prompts import PromptTemplate, load_prompt
 class MapAgent:
     def __init__(self, config, model_temperature: float = 0.0):
         self.config = config
-        self._load_prompts("prompts/map_agent_prompt.yaml")
+        self.prompts = load_prompts("prompts/map_agent_prompt.yaml")
         self._setup_llm(model_temperature)
         self._setup_tools()
         self._setup_agent()
-
-    def _load_prompts(self, file_path: str):
-        try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                self.prompts = yaml.safe_load(file)
-        except Exception as e:
-            print(f"Error loading prompts: {e}")
 
     def _setup_tools(self):
         self.tools = [

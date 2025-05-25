@@ -1,6 +1,6 @@
 import os
 import json
-import yaml
+
 from langchain.agents import Tool, AgentType
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -9,23 +9,16 @@ from dotenv import load_dotenv
 from typing import Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-
+from agents.utils.prompt import load_prompts
 
 class AttractionAgent:
 
     def __init__(self, config):
         self.config = config
-        self._load_prompts("prompts/attraction_agent_prompt.yaml")
+        self.prompts = load_prompts("prompts/attraction_agent_prompt.yaml")
         self._setup_llm()
         self._setup_tools()
         self._setup_agent()
-
-    def _load_prompts(self, file_path: str):
-        try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                self.prompts = yaml.safe_load(file)
-        except Exception as e:
-            print(f"Error loading prompts: {e}")
 
     def _setup_llm(self):
         self.llm = ChatGoogleGenerativeAI(

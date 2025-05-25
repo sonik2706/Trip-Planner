@@ -10,21 +10,14 @@ from langchain.chains import LLMChain
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
-
+from agents.utils.prompt import load_prompts
 
 class PromptAgent:
     def __init__(self, config):
         self.config = config
-        self._load_prompts("prompts/prompt_agent_prompt.yaml")
+        self.prompts = load_prompts("prompts/prompt_agent_prompt.yaml")
         self._setup_tools()
         self._setup_llm()
-
-    def _load_prompts(self, file_path: str):
-        try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                self.prompts = yaml.safe_load(file)
-        except Exception as e:
-            print(f"Error loading prompts: {e}")
 
     def _setup_tools(self):
         self.tools = []
