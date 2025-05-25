@@ -40,7 +40,15 @@ class PromptAgent:
     
     def extract(self, couontry: str, city: str, user_description: str) -> dict:
         """
+        Extracts structured travel preferences from a user's description using an LLM.
 
+        Args:
+            country (str): Destination country.
+            city (str): Destination city.
+            user_description (str): Free-text input with travel preferences.
+
+        Returns:
+            dict: Extracted preferences or error info.
         """
         prompt = PromptTemplate.from_template(self.prompts["template"])
         chain = prompt | self.llm 
