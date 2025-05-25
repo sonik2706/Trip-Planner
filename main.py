@@ -9,7 +9,7 @@ import time
 from agents.attraction_agent import AttractionAgent
 from agents.hotel_agent import HotelAgent
 from agents.map_agent import MapAgent
-
+from agents.prompt_agent import PromptAgent
 
 DEFAULT_PARAMS = {
     "country": "Poland",
@@ -76,9 +76,11 @@ params = {
 st.title("Trip Planner")
 st.markdown("---")
 
-user_notes = st.text_area("Write your travel preferences or comments here")
+user_description = st.text_area("Write your travel preferences or comments here")
 
 hotel_agent = HotelAgent()
+
+prompt_agent = PromptAgent()
 
 # Initialize session_state for hotels if not set
 if "hotels_data" not in st.session_state:
@@ -86,6 +88,10 @@ if "hotels_data" not in st.session_state:
 
 if "attractions" not in st.session_state:
     st.session_state.attractions = []
+
+if st.button("Run"):
+    response = prompt_agent.extract(country ,city , user_description)
+    st.write(response)
 
 col1, col2 = st.columns([1, 1])
 
