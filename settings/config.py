@@ -14,6 +14,8 @@ class Config(BaseSettings):
     TAVILY_API_KEY: str
     LLM_MODEL: str
     DISTANCE_MATRIX_API_KEY: str
+    BOOKING_API_KEY: str
+    BOOKING_API_HOST: str    
 
     class Config:
         env_file = ".env"
