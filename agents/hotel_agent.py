@@ -2,6 +2,7 @@
 hotel_agent.py
 
 """
+
 import requests as r
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 from geopy.geocoders import Nominatim
@@ -10,11 +11,10 @@ from geopy.extra.rate_limiter import RateLimiter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
 
-from settings.config import config
-
 
 class HotelAgent:
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self.geolocator = Nominatim(user_agent="hotel_app_geolocator")
         self.geocode = RateLimiter(self.geolocator.geocode, min_delay_seconds=1)
         self._setup_tools()
@@ -27,7 +27,7 @@ class HotelAgent:
     def _setup_llm(self, model_temperature: float = 0.0):
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
-            google_api_key=config.GEMINI_API_KEY,
+            google_api_key=self.config.GEMINI_API_KEY,
             temperature=0.3,
             top_k=40,
             top_p=0.95,
@@ -40,18 +40,18 @@ class HotelAgent:
     #         llm=self.llm,
     #         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     #         verbose=True,
-    #     )   
+    #     )
 
     def find_hotels(self, params):
         pass
 
     def fetch_hotels_from_booking(self, params):
-        if not config.BOOKING_API_KEY:
+        if not self.config.BOOKING_API_KEY:
             raise Exception("Missing Booking API key")
 
         headers = {
-            "X-RapidAPI-Key": config.BOOKING_API_KEY,
-            "X-RapidAPI-Host": config.BOOKING_API_HOST
+            "X-RapidAPI-Key": self.config.BOOKING_API_KEY,
+            "X-RapidAPI-Host": self.config.BOOKING_API_HOST,
         }
 
         # First get city ID (dest_id)
@@ -59,7 +59,7 @@ class HotelAgent:
         dest_query = {
             "name": params["city"],
             "locale": "pl",
-            "country": params["country"]
+            "country": params["country"],
         }
 
         dest_resp = r.get(dest_url, headers=headers, params=dest_query)
@@ -73,8 +73,12 @@ class HotelAgent:
         dest_id = dest_data[0].get("dest_id")
         if not dest_id:
             raise Exception("Missing location identifier in API response.")
-        
-        api_order_by = params["sort_by"] if params["sort_by"] in ["price", "popularity", "review_score"] else "price"
+
+        api_order_by = (
+            params["sort_by"]
+            if params["sort_by"] in ["price", "popularity", "review_score"]
+            else "price"
+        )
 
         search_url = "https://booking-com.p.rapidapi.com/v1/hotels/search"
         search_params = {
@@ -91,7 +95,7 @@ class HotelAgent:
             "price_max": params["max_price"],
             "stars": ",".join(str(s) for s in params["stars"]),
             "page_number": "0",
-            "units": "metric"
+            "units": "metric",
         }
 
         resp = r.get(search_url, headers=headers, params=search_params)
@@ -101,10 +105,12 @@ class HotelAgent:
         data = resp.json()
         hotels_raw = data.get("result", [])
         hotels = []
-        
+
         for h in hotels_raw:
             price = h.get("min_total_price")
-            if price is None or not (params["min_price"] <= price <= params["max_price"]): 
+            if price is None or not (
+                params["min_price"] <= price <= params["max_price"]
+            ):
                 continue
 
             review_score = h.get("review_score")
@@ -120,14 +126,16 @@ class HotelAgent:
             lon = h.get("longitude")
             coords = (lat, lon) if lat is not None and lon is not None else None
 
-            hotels.append({
-                "name": h.get("hotel_name", "Unknown name"),
-                "price": price,
-                "review_score": h.get("review_score", "Unavailable"),
-                "location": h.get("address", "No data"),
-                "link": f"https://www.booking.com/hotel/{h.get('hotel_id')}.html",
-                "coords": coords
-            })
+            hotels.append(
+                {
+                    "name": h.get("hotel_name", "Unknown name"),
+                    "price": price,
+                    "review_score": h.get("review_score", "Unavailable"),
+                    "location": h.get("address", "No data"),
+                    "link": f"https://www.booking.com/hotel/{h.get('hotel_id')}.html",
+                    "coords": coords,
+                }
+            )
 
         return hotels
 
@@ -154,13 +162,16 @@ class HotelAgent:
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=1000,
         )
-        text = response.choices[0].message['content']
+        text = response.choices[0].message["content"]
         try:
             fixed_data = json.loads(text)
         except Exception:
-            fixed_data = {"attractions": attractions_json["attractions"], "hotels": hotels_json["hotels"]}
+            fixed_data = {
+                "attractions": attractions_json["attractions"],
+                "hotels": hotels_json["hotels"],
+            }
         return fixed_data
 
     def geocode_address(self, address, retries=3, delay=1):
@@ -180,13 +191,15 @@ class HotelAgent:
                 else:
                     return None
             except GeocoderUnavailable:
-                st.warning("Nominatim server is temporarily unavailable. Please try again later.")
+                st.warning(
+                    "Nominatim server is temporarily unavailable. Please try again later."
+                )
                 return None
         return None
 
     def distance_km(self, coord1, coord2):
         if coord1 is None or coord2 is None:
-            return float('inf')
+            return float("inf")
         return geodesic(coord1, coord2).km
 
     def enrich_hotels_with_distances(self, hotels, attractions):
@@ -199,7 +212,9 @@ class HotelAgent:
                     dist = self.distance_km(hotel_coord, attr_coord)
                     distances.append(dist)
             hotel["distances_to_attractions"] = distances
-            hotel["avg_distance"] = round(sum(distances)/len(distances), 2) if distances else None
+            hotel["avg_distance"] = (
+                round(sum(distances) / len(distances), 2) if distances else None
+            )
         return hotels
 
     def check_nominatim_exists(self, location, name) -> bool:
@@ -212,7 +227,9 @@ class HotelAgent:
     def filter_valid_locations(self, items):
         filtered = []
         for obj in items:
-            if self.check_nominatim_exists(obj.get("location", ""), obj.get("name", "")):
+            if self.check_nominatim_exists(
+                obj.get("location", ""), obj.get("name", "")
+            ):
                 filtered.append(obj)
         return filtered
 
@@ -222,7 +239,7 @@ class HotelAgent:
             if "coords" in obj and obj["coords"]:
                 valid.append(obj)
                 continue
-            
+
             address = obj.get("location", "")
             name = obj.get("name", "")
             loc = None
@@ -230,9 +247,9 @@ class HotelAgent:
                 loc = self.geocode(address)
             if not loc and name:
                 loc = self.geocode(name)
-            
+
             if loc:
                 obj["coords"] = (loc.latitude, loc.longitude)
                 valid.append(obj)
-        
+
         return valid

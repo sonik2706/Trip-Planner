@@ -3,17 +3,18 @@ prompt_agent.py
 
 
 """
+
 import yaml
 import json
 from langchain.chains import LLMChain
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate    
+from langchain.prompts import PromptTemplate
 
-from settings.config import config
 
 class PromptAgent:
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self._load_prompts("prompts/prompt_agent_prompt.yaml")
         self._setup_tools()
         self._setup_llm()
@@ -31,13 +32,13 @@ class PromptAgent:
     def _setup_llm(self, model_temperature: float = 0.0):
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
-            google_api_key=config.GEMINI_API_KEY,
+            google_api_key=self.config.GEMINI_API_KEY,
             temperature=0.3,
             top_k=40,
             top_p=0.95,
             verbose=True,
         )
-    
+
     def extract(self, couontry: str, city: str, user_description: str) -> dict:
         """
         Extracts structured travel preferences from a user's description using an LLM.
@@ -51,13 +52,11 @@ class PromptAgent:
             dict: Extracted preferences or error info.
         """
         prompt = PromptTemplate.from_template(self.prompts["template"])
-        chain = prompt | self.llm 
+        chain = prompt | self.llm
 
-        response = chain.invoke({
-            "country": couontry,
-            "city": city,
-            "user_description": user_description
-        })
+        response = chain.invoke(
+            {"country": couontry, "city": city, "user_description": user_description}
+        )
 
         try:
             # Handle response from Gemini, which is an AIMessage

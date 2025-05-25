@@ -10,12 +10,11 @@ from typing import Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
-from settings.config import config
-
 
 class AttractionAgent:
 
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self._load_prompts("prompts/attraction_agent_prompt.yaml")
         self._setup_llm()
         self._setup_tools()
@@ -31,7 +30,7 @@ class AttractionAgent:
     def _setup_llm(self):
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
-            google_api_key=config.GEMINI_API_KEY,
+            google_api_key=self.config.GEMINI_API_KEY,
             temperature=0.3,
             top_k=40,
             top_p=0.95,
@@ -39,7 +38,7 @@ class AttractionAgent:
         )
 
     def _setup_tools(self):
-        tavily_tool = TavilySearchResults(api_key=config.TAVILY_API_KEY)
+        tavily_tool = TavilySearchResults(tavily_api_key=self.config.TAVILY_API_KEY)
         self.tools = [
             Tool(
                 name="Tavily Web Search",
@@ -98,18 +97,20 @@ class AttractionAgent:
         json_formatter_chain = LLMChain(llm=self.llm, prompt=json_formatter_prompt)
 
         # Format the raw data into JSON
-        json_response = json_formatter_chain.run({
-            "city_name": city_name,
-            "raw_data": raw_data,
-            "focus_or_general": focus if focus else "general",
-            "num_attractions": num_attractions,
-        })
-        
+        json_response = json_formatter_chain.run(
+            {
+                "city_name": city_name,
+                "raw_data": raw_data,
+                "focus_or_general": focus if focus else "general",
+                "num_attractions": num_attractions,
+            }
+        )
+
         # Clean up and parse the JSON
         try:
             # Find JSON content (looking for content between curly braces)
-            start_idx = json_response.find('{')
-            end_idx = json_response.rfind('}') + 1
+            start_idx = json_response.find("{")
+            end_idx = json_response.rfind("}") + 1
             if start_idx >= 0 and end_idx > 0:
                 json_str = json_response[start_idx:end_idx]
                 # Validate by parsing
@@ -117,14 +118,18 @@ class AttractionAgent:
 
                 # Ensure we have exactly the requested number of attractions
                 while len(json_data["attractions"]) < num_attractions:
-                    json_data["attractions"].append({
-                        "name": f"Additional Attraction #{len(json_data['attractions']) + 1}",
-                        "description": "Information about this attraction was supplemented based on general knowledge.",
-                    })
+                    json_data["attractions"].append(
+                        {
+                            "name": f"Additional Attraction #{len(json_data['attractions']) + 1}",
+                            "description": "Information about this attraction was supplemented based on general knowledge.",
+                        }
+                    )
                     for attraction in json_data["attractions"]:
                         # Remove fun_facts if it wasn't found
                         if "fun_facts" in attraction and (
-                                not attraction["fun_facts"] or attraction["fun_facts"] == "Not available"):
+                            not attraction["fun_facts"]
+                            or attraction["fun_facts"] == "Not available"
+                        ):
                             del attraction["fun_facts"]
 
                 # Return beautified JSON

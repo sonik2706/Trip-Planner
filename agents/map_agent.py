@@ -13,11 +13,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate, load_prompt
 
-from settings.config import config
-
 
 class MapAgent:
-    def __init__(self, model_temperature: float = 0.0):
+    def __init__(self, config, model_temperature: float = 0.0):
+        self.config = config
         self._load_prompts("prompts/map_agent_prompt.yaml")
         self._setup_llm(model_temperature)
         self._setup_tools()
@@ -29,7 +28,7 @@ class MapAgent:
                 self.prompts = yaml.safe_load(file)
         except Exception as e:
             print(f"Error loading prompts: {e}")
-        
+
     def _setup_tools(self):
         self.tools = [
             Tool(
@@ -38,7 +37,7 @@ class MapAgent:
                 description=(
                     "Estimate travel time and distance between two locations. "
                     "Input should be a string like: 'from X to Y using walking|driving|transit'"
-                )
+                ),
             ),
             Tool(
                 name="get_coordinates",
@@ -47,19 +46,19 @@ class MapAgent:
                     "Get the coordinates (latitude and longitude) for multiple locations. "
                     "Input should be a comma-separated list of location names or addresses (e.g., 'Colosseum, Rome, Pantheon, Rome'). "
                     "Returns a list of results like: 'Colosseum: 41.89, 12.49'."
-                )
+                ),
             ),
             Tool(
                 name="generate_google_maps_link",
                 func=self.generate_google_maps_link,
-                description="Generate a Google Maps route link from a comma-separated list of location names (e.g., 'Colosseum, Pantheon, Roman Forum')."
-            )
+                description="Generate a Google Maps route link from a comma-separated list of location names (e.g., 'Colosseum, Pantheon, Roman Forum').",
+            ),
         ]
 
     def _setup_llm(self, model_temperature: float = 0.0):
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
-            google_api_key=config.GEMINI_API_KEY,
+            google_api_key=self.config.GEMINI_API_KEY,
             temperature=0.3,
             top_k=40,
             top_p=0.95,
@@ -80,21 +79,25 @@ class MapAgent:
         Example format: 'from PJATK to Old Town Market Square using walking'
         """
         import re
+
         pattern = r"from (.+?) to (.+?) using (walking|driving|transit)"
         match = re.search(pattern, query.strip(), re.IGNORECASE)
 
         if not match:
-            return (
-                "Invalid input. Use format like: 'from Colosseum to Pantheon using walking'."
-            )
+            return "Invalid input. Use format like: 'from Colosseum to Pantheon using walking'."
 
         origin = match.group(1).strip()
         destination = match.group(2).strip()
         mode = match.group(3).strip().lower()
-        
+
         return self.get_eta(origin, destination, mode)
 
-    def get_eta(self, origin: str, destination: str, mode: Literal["walking", "driving", "transit"]) -> str:
+    def get_eta(
+        self,
+        origin: str,
+        destination: str,
+        mode: Literal["walking", "driving", "transit"],
+    ) -> str:
         """
         Estimate travel time and distance between two locations using the Google Maps Distance Matrix API.
 
@@ -112,11 +115,11 @@ class MapAgent:
             query = (
                 f"https://maps.googleapis.com/maps/api/distancematrix/json"
                 f"?origins={quote_plus(origin)}&destinations={quote_plus(destination)}&mode={mode}"
-                f"&key={config.DISTANCE_MATRIX_API_KEY}"
+                f"&key={self.config.DISTANCE_MATRIX_API_KEY}"
             )
             print(query)
             response = r.get(query)
-            
+
             data = response.json()
             print(data)
             element = data["rows"][0]["elements"][0]
@@ -144,7 +147,7 @@ class MapAgent:
             encoded_location = quote_plus(location)
             url = (
                 f"https://maps.googleapis.com/maps/api/geocode/json"
-                f"?address={encoded_location}&key={config.DISTANCE_MATRIX_API_KEY}"
+                f"?address={encoded_location}&key={self.config.DISTANCE_MATRIX_API_KEY}"
             )
 
             response = r.get(url)
@@ -185,19 +188,30 @@ class MapAgent:
         Returns:
             str: Google Maps link with route through these locations.
         """
-        attractions = [item.strip() for item in attractions_str.split(",") if item.strip()]
-    
+        attractions = [
+            item.strip() for item in attractions_str.split(",") if item.strip()
+        ]
+
         if not attractions:
             return "No valid attractions provided."
 
         base_url = "https://www.google.com/maps/dir/"
 
         # Ensure each attraction is converted to a string before applying quote_plus
-        return base_url + "/".join(
-            quote_plus(str(attraction)) for attraction in attractions
-        ) + f"&travelmode=transit"
+        return (
+            base_url
+            + "/".join(quote_plus(str(attraction)) for attraction in attractions)
+            + f"&travelmode=transit"
+        )
 
-    def optimize(self, city: str, days: int, accomodation_address: str,list_attractions: list, focus: Literal["walking", "driving", "transit"] = "transit") -> Dict:
+    def optimize(
+        self,
+        city: str,
+        days: int,
+        accomodation_address: str,
+        list_attractions: list,
+        focus: Literal["walking", "driving", "transit"] = "transit",
+    ) -> Dict:
         """
         Generate an optimized itinerary by estimating ETAs from the accommodation to each attraction.
 
@@ -210,12 +224,12 @@ class MapAgent:
         Returns:
             Dict: Optimized itinerary or planning result
         """
-        prompt = self.prompts['template'].format(
+        prompt = self.prompts["template"].format(
             city=city,
             focus=focus,
             days=days,
             accomodation_address=accomodation_address,
-            list_attractions="\n".join(f"- {place}" for place in list_attractions)
+            list_attractions="\n".join(f"- {place}" for place in list_attractions),
         )
 
         response = self.agent.invoke(prompt)
