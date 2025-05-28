@@ -13,6 +13,7 @@ class Config(BaseSettings):
     GEMINI_API_KEY: str
     TAVILY_API_KEY: str
     LLM_MODEL: str
+    BOOKING_API_KEY: str
     DISTANCE_MATRIX_API_KEY: str
 
     class Config:
