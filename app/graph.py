@@ -81,7 +81,7 @@ class Graph:
 
     def _generate_attractions(self, state: State) -> State:
         prefs = state["trip_preferences"]  # TO BE ADDED!!!
-        city = prefs.get("city", "Rome")
+        city = state["city"]
         focus = prefs.get("focus", None)
         attractions = self.attraction_agent.find_attractions(
             city_name=city, num_attractions=10, focus=focus
@@ -90,18 +90,18 @@ class Graph:
         return state
 
     def _generate_hotels(self, state: State) -> State:
-        # hotel_params = state["hotel_params"]
+        hotel_params = state["hotel_params"]
         attractions = state["attractions"]
         geocoder = LocationGeocoder()
         hotels = self.hotel_agent.get_hotel_recommendations(
-            city="Rome",
+            city=hotel_params["city"],
             attractions=geocoder.get_attraction_coordinates(attractions),
-            budget_range=(800, 1200),
-            min_review_score=8.0,
-            checkin_date="2025-06-05",
-            checkout_date="2025-06-08",
+            budget_range=(hotel_params["min_price"], hotel_params["max_price"]),
+            min_review_score=hotel_params["min_review_score"],
+            checkin_date=hotel_params["checkin_date"],
+            checkout_date=hotel_params["checkout_date"],
             use_agent=True,
-            currency="PLN")
+            currency=hotel_params["currency"],)
         state["hotels"] = hotels
         return state
 
