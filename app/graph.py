@@ -6,12 +6,14 @@ import graphviz
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
 
+from Utils.LocationGeocoder import LocationGeocoder
 from agents.prompt_agent import PromptAgent
 from agents.attraction_agent import AttractionAgent
 from agents.hotel_agent import HotelAgent
 from agents.map_agent import MapAgent
 
 from settings.config import Config
+
 
 class State(TypedDict, total=False):
     country: str
@@ -40,20 +42,19 @@ class Graph:
         graph.add_node("verify_prompt", self._verify_prompt)
         graph.add_node("search_for_attractions", self._generate_attractions)
         graph.add_node("find_hotels", self._generate_hotels)
-        graph.add_node("plan_the_trip", self._build_itinerary)
-        graph.add_node("generate_response", self._generate_response)
+        # graph.add_node("plan_the_trip", self._build_itinerary)
+        # graph.add_node("generate_response", self._generate_response)
 
         # Set entry and conditional routing
         graph.set_entry_point("verify_prompt")
-        
+
         graph.add_edge("verify_prompt", "search_for_attractions")
-        graph.add_edge("verify_prompt", "find_hotels")
+        graph.add_edge("search_for_attractions", "find_hotels")
 
         # Final steps
-        graph.add_edge("search_for_attractions", "plan_the_trip")
-        graph.add_edge("find_hotels", "plan_the_trip")
-        graph.add_edge("plan_the_trip", "generate_response")
-        graph.add_edge("generate_response", END)
+        # graph.add_edge("find_hotels", "plan_the_trip")
+        # graph.add_edge("plan_the_trip", "generate_response")
+        # graph.add_edge("generate_response", END)
 
         self._raw_graph = graph
 
@@ -74,12 +75,12 @@ class Graph:
             print("SKIPPING PROMT VERIFICATION!!!")
             return state
 
-        preferences = self.prompt_agent.extract(state["country"], state["city"],state["user_input"])
+        preferences = self.prompt_agent.extract(state["country"], state["city"], state["user_input"])
         state["trip_preferences"] = preferences
         return state
 
     def _generate_attractions(self, state: State) -> State:
-        prefs = state["trip_preferences"] # TO BE ADDED!!!
+        prefs = state["trip_preferences"]  # TO BE ADDED!!!
         city = prefs.get("city", "Rome")
         focus = prefs.get("focus", None)
         attractions = self.attraction_agent.find_attractions(
@@ -89,8 +90,18 @@ class Graph:
         return state
 
     def _generate_hotels(self, state: State) -> State:
-        hotel_params = state["hotel_params"]
-        hotels = self.hotel_agent.fetch_hotels_from_booking(params=hotel_params)
+        # hotel_params = state["hotel_params"]
+        attractions = state["attractions"]
+        geocoder = LocationGeocoder()
+        hotels = self.hotel_agent.get_hotel_recommendations(
+            city="Rome",
+            attractions=geocoder.get_attraction_coordinates(attractions),
+            budget_range=(800, 1200),
+            min_review_score=8.0,
+            checkin_date="2025-06-05",
+            checkout_date="2025-06-08",
+            use_agent=True,
+            currency="PLN")
         state["hotels"] = hotels
         return state
 
@@ -114,7 +125,6 @@ class Graph:
         pass
 
     def visualize_graph(self, filename="manager_graph.jpg"):
-
         img_bytes = self.graph.get_graph().draw_mermaid_png()
         with open("graph.png", "wb") as f:
             f.write(img_bytes)
