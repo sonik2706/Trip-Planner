@@ -16,6 +16,7 @@ from dataclasses import dataclass
 @dataclass
 class TravelRequest:
     """Fallback data class for travel planning request"""
+
     city: str
     country: str = ""
     checkin_date: str = ""
@@ -34,16 +35,14 @@ class TravelRequest:
     trip_days: int = 3
 
 
-
 def initialize_session_state():
     """Initialize Streamlit session state"""
-    if 'travel_results' not in st.session_state:
+    if "travel_results" not in st.session_state:
         st.session_state.travel_results = None
-    if 'planning_stage' not in st.session_state:
-        st.session_state.planning_stage = 'input'
-    if 'manager' not in st.session_state:
+    if "planning_stage" not in st.session_state:
+        st.session_state.planning_stage = "input"
+    if "manager" not in st.session_state:
         st.session_state.manager = None
-
 
 
 def create_sidebar_filters():
@@ -76,7 +75,9 @@ def create_sidebar_filters():
     # Budget
     currency = st.sidebar.selectbox("Currency", ["USD", "EUR", "PLN", "GBP", "CAD"])
 
-    budget_option = st.sidebar.radio("Budget Type", ["Set Range", "Maximum Only", "No Limit"])
+    budget_option = st.sidebar.radio(
+        "Budget Type", ["Set Range", "Maximum Only", "No Limit"]
+    )
 
     min_price, max_price = None, None
     if budget_option == "Set Range":
@@ -93,7 +94,7 @@ def create_sidebar_filters():
         "Star classes",
         [1, 2, 3, 4, 5],
         default=[3, 4, 5],
-        help="Select preferred hotel star ratings"
+        help="Select preferred hotel star ratings",
     )
 
     max_hotels = st.sidebar.slider("Maximum hotels to show", 5, 20, 10)
@@ -105,7 +106,7 @@ def create_sidebar_filters():
     attraction_focus = st.sidebar.text_input(
         "Focus/Theme (optional)",
         placeholder="e.g., history, art, food, nightlife",
-        help="Specify what type of attractions you're interested in"
+        help="Specify what type of attractions you're interested in",
     )
 
     # Transportation
@@ -113,7 +114,7 @@ def create_sidebar_filters():
     travel_mode = st.sidebar.selectbox(
         "Preferred travel mode",
         ["transit", "walking", "driving"],
-        help="How you plan to get around the city"
+        help="How you plan to get around the city",
     )
 
     return TravelRequest(
@@ -132,7 +133,7 @@ def create_sidebar_filters():
         num_attractions=num_attractions,
         attraction_focus=attraction_focus if attraction_focus else None,
         travel_mode=travel_mode,
-        trip_days=trip_days
+        trip_days=trip_days,
     )
 
 
@@ -140,10 +141,10 @@ def display_attractions(attractions_data: Dict):
     """Display attractions results"""
     st.subheader(f"🎯 Top Attractions in {attractions_data['city']}")
 
-    if attractions_data.get('focus') and attractions_data['focus'] != 'general':
+    if attractions_data.get("focus") and attractions_data["focus"] != "general":
         st.info(f"🎨 Focused on: **{attractions_data['focus']}**")
 
-    attractions = attractions_data.get('attractions', [])
+    attractions = attractions_data.get("attractions", [])
     if not attractions:
         st.warning("No attractions found")
         return
@@ -154,36 +155,39 @@ def display_attractions(attractions_data: Dict):
         with cols[i % 2]:
             with st.container():
                 st.markdown(f"**📍 {attraction.get('name', 'Unknown')}**")
-                st.write(attraction.get('description', 'No description available'))
+                st.write(attraction.get("description", "No description available"))
 
                 # Show coordinates if available
-                if attraction.get('coords'):
-                    coords = attraction['coords']
+                if attraction.get("coords"):
+                    coords = attraction["coords"]
                     st.caption(f"📍 Location: {coords[0]:.4f}, {coords[1]:.4f}")
 
-                if attraction.get('fun_facts'):
+                if attraction.get("fun_facts"):
                     st.caption(f"💡 {attraction['fun_facts']}")
                 st.markdown("---")
 
     # Map visualization for attractions with coordinates
-    attractions_with_coords = [a for a in attractions if a.get('coords')]
+    attractions_with_coords = [a for a in attractions if a.get("coords")]
     if attractions_with_coords:
         st.subheader("🗺️ Attractions Map")
 
-        map_data = pd.DataFrame({
-            'name': [a['name'] for a in attractions_with_coords],
-            'lat': [a['coords'][0] for a in attractions_with_coords],
-            'lon': [a['coords'][1] for a in attractions_with_coords],
-            'description': [a.get('description', '')[:100] + '...' for a in attractions_with_coords]
-        })
+        map_data = pd.DataFrame(
+            {
+                "name": [a["name"] for a in attractions_with_coords],
+                "lat": [a["coords"][0] for a in attractions_with_coords],
+                "lon": [a["coords"][1] for a in attractions_with_coords],
+                "description": [
+                    a.get("description", "")[:100] + "..."
+                    for a in attractions_with_coords
+                ],
+            }
+        )
 
-        st.map(map_data[['lat', 'lon']], zoom=12)
+        st.map(map_data[["lat", "lon"]], zoom=12)
 
         # Attraction details table
         st.dataframe(
-            map_data[['name', 'description']],
-            use_container_width=True,
-            hide_index=True
+            map_data[["name", "description"]], use_container_width=True, hide_index=True
         )
 
 
@@ -194,22 +198,28 @@ def display_hotels(hotels_data: Dict, currency: str):
     # Summary metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Hotels", hotels_data['total_found'])
+        st.metric("Total Hotels", hotels_data["total_found"])
     with col2:
-        st.metric("In Budget", hotels_data['budget_hotels_count'])
+        st.metric("In Budget", hotels_data["budget_hotels_count"])
     with col3:
-        st.metric("Alternatives", hotels_data['alternative_hotels_count'])
+        st.metric("Alternatives", hotels_data["alternative_hotels_count"])
     with col4:
-        avg_price = sum(h['price'] for h in hotels_data['hotels'][:5]) / min(5, len(hotels_data['hotels']))
+        avg_price = sum(h["price"] for h in hotels_data["hotels"][:5]) / min(
+            5, len(hotels_data["hotels"])
+        )
         st.metric("Avg Price", f"{avg_price:.0f} {currency}")
 
     # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["🏆 Top Recommendations", "📊 Price Analysis", "🗺️ Location Map"])
+    tab1, tab2, tab3 = st.tabs(
+        ["🏆 Top Recommendations", "📊 Price Analysis", "🗺️ Location Map"]
+    )
 
     with tab1:
         # Display hotels in categories
-        budget_hotels = [h for h in hotels_data['hotels'] if h['in_original_budget']]
-        alternative_hotels = [h for h in hotels_data['hotels'] if not h['in_original_budget']]
+        budget_hotels = [h for h in hotels_data["hotels"] if h["in_original_budget"]]
+        alternative_hotels = [
+            h for h in hotels_data["hotels"] if not h["in_original_budget"]
+        ]
 
         if budget_hotels:
             st.markdown("### 💰 Hotels Within Budget")
@@ -224,32 +234,36 @@ def display_hotels(hotels_data: Dict, currency: str):
 
     with tab2:
         # Price analysis chart
-        if hotels_data['hotels']:
-            df = pd.DataFrame(hotels_data['hotels'])
+        if hotels_data["hotels"]:
+            df = pd.DataFrame(hotels_data["hotels"])
 
             fig = px.scatter(
                 df,
-                x='price',
-                y='review_score',
-                size='value_score',
-                color='star_class',
-                hover_data=['name', 'distance_to_attractions'],
-                title="Hotel Price vs Quality Analysis"
+                x="price",
+                y="review_score",
+                size="value_score",
+                color="star_class",
+                hover_data=["name", "distance_to_attractions"],
+                title="Hotel Price vs Quality Analysis",
             )
             fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
 
     with tab3:
         # Mock map (replace with real coordinates when available)
-        st.info("🗺️ Map visualization would show hotel locations relative to attractions")
-        if hotels_data['hotels']:
-            map_data = pd.DataFrame({
-                'name': [h['name'] for h in hotels_data['hotels'][:5]],
-                'lat': [50.0647 + i * 0.001 for i in range(5)],
-                'lon': [19.9450 + i * 0.001 for i in range(5)],
-                'price': [h['price'] for h in hotels_data['hotels'][:5]]
-            })
-            st.map(map_data[['lat', 'lon']], zoom=13)
+        st.info(
+            "🗺️ Map visualization would show hotel locations relative to attractions"
+        )
+        if hotels_data["hotels"]:
+            map_data = pd.DataFrame(
+                {
+                    "name": [h["name"] for h in hotels_data["hotels"][:5]],
+                    "lat": [50.0647 + i * 0.001 for i in range(5)],
+                    "lon": [19.9450 + i * 0.001 for i in range(5)],
+                    "price": [h["price"] for h in hotels_data["hotels"][:5]],
+                }
+            )
+            st.map(map_data[["lat", "lon"]], zoom=13)
 
 
 def display_hotel_card(hotel: Dict):
@@ -260,7 +274,9 @@ def display_hotel_card(hotel: Dict):
         with col1:
             st.markdown(f"**🏨 {hotel['name']}**")
             st.write(f"📍 {hotel['location']}")
-            st.caption(f"⭐ {hotel['review_score']}/10 ({hotel['review_count']} reviews)")
+            st.caption(
+                f"⭐ {hotel['review_score']}/10 ({hotel['review_count']} reviews)"
+            )
 
         with col2:
             st.metric("Price/night", f"{hotel['price']} {hotel['currency']}")
@@ -273,11 +289,13 @@ def display_hotel_card(hotel: Dict):
         # Progress bars for scores
         col1, col2 = st.columns(2)
         with col1:
-            st.progress(hotel['ranking_score'], text=f"Ranking: {hotel['ranking_score']:.2f}")
+            st.progress(
+                hotel["ranking_score"], text=f"Ranking: {hotel['ranking_score']:.2f}"
+            )
         with col2:
-            st.progress(hotel['value_score'], text=f"Value: {hotel['value_score']:.2f}")
+            st.progress(hotel["value_score"], text=f"Value: {hotel['value_score']:.2f}")
 
-        if not hotel['in_original_budget']:
+        if not hotel["in_original_budget"]:
             st.warning(f"💡 {hotel['category']}: Exceeds budget but high quality")
 
         st.markdown("---")
@@ -286,19 +304,24 @@ def display_hotel_card(hotel: Dict):
 def display_itinerary(itinerary_data: Dict):
     """Display optimized itinerary"""
     st.subheader(
-        f"🗓️ {itinerary_data.get('days', 'Multi')}-Day Itinerary for {itinerary_data.get('city', 'Your Destination')}")
+        f"🗓️ {itinerary_data.get('days', 'Multi')}-Day Itinerary for {itinerary_data.get('city', 'Your Destination')}"
+    )
 
     # Itinerary metrics
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Travel Mode", itinerary_data.get('travel_mode', 'Transit').title())
+        st.metric("Travel Mode", itinerary_data.get("travel_mode", "Transit").title())
     with col2:
-        st.metric("Total Distance", itinerary_data.get('total_distance', 'Calculating...'))
+        st.metric(
+            "Total Distance", itinerary_data.get("total_distance", "Calculating...")
+        )
     with col3:
-        st.metric("Estimated Time", itinerary_data.get('estimated_time', 'Calculating...'))
+        st.metric(
+            "Estimated Time", itinerary_data.get("estimated_time", "Calculating...")
+        )
 
     # Display daily itinerary
-    itinerary = itinerary_data.get('itinerary', {})
+    itinerary = itinerary_data.get("itinerary", {})
     if isinstance(itinerary, dict):
         for day, activities in itinerary.items():
             with st.expander(f"📅 {day}", expanded=True):
@@ -314,12 +337,12 @@ def display_itinerary(itinerary_data: Dict):
         st.info("Itinerary optimization in progress...")
 
     # Maps link
-    maps_link = itinerary_data.get('maps_link')
+    maps_link = itinerary_data.get("maps_link")
     if maps_link:
         st.markdown(f"🗺️ [Open Optimized Route in Google Maps]({maps_link})")
 
     # Additional itinerary insights
-    if itinerary_data.get('accommodation'):
+    if itinerary_data.get("accommodation"):
         st.info(f"🏨 **Base Accommodation**: {itinerary_data['accommodation']}")
 
 
@@ -327,7 +350,7 @@ def display_summary_dashboard(results: Dict, request: TravelRequest):
     """Display comprehensive summary dashboard"""
     st.subheader("📋 Travel Plan Dashboard")
 
-    summary = results.get('summary', {})
+    summary = results.get("summary", {})
 
     # Key metrics in columns
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -335,31 +358,34 @@ def display_summary_dashboard(results: Dict, request: TravelRequest):
     with col1:
         st.metric(
             "Attractions",
-            summary.get('total_attractions', 0),
-            delta=f"Focus: {request.attraction_focus or 'General'}"
+            summary.get("total_attractions", 0),
+            delta=f"Focus: {request.attraction_focus or 'General'}",
         )
 
     with col2:
         st.metric(
             "Hotels Found",
-            summary.get('total_hotels', 0),
-            delta=f"{summary.get('budget_hotels_count', 0)} in budget"
+            summary.get("total_hotels", 0),
+            delta=f"{summary.get('budget_hotels_count', 0)} in budget",
         )
 
     with col3:
         st.metric(
             "Trip Duration",
-            summary.get('duration', f"{request.trip_days} days"),
-            delta=f"{request.travel_mode.title()} focused"
+            summary.get("duration", f"{request.trip_days} days"),
+            delta=f"{request.travel_mode.title()} focused",
         )
 
     with col4:
-        budget_range = summary.get('budget_range', 'Not specified')
-        st.metric("Budget Range", budget_range.split(' ')[0] if budget_range != 'Not specified' else 'Any')
+        budget_range = summary.get("budget_range", "Not specified")
+        st.metric(
+            "Budget Range",
+            budget_range.split(" ")[0] if budget_range != "Not specified" else "Any",
+        )
         st.caption(f"Currency: {request.currency}")
 
     with col5:
-        processing_time = results.get('processing_time')
+        processing_time = results.get("processing_time")
         if processing_time:
             st.metric("Processing Time", f"{processing_time:.1f}s")
         else:
@@ -376,7 +402,9 @@ def display_summary_dashboard(results: Dict, request: TravelRequest):
         if request.country:
             st.write(f"• **Country**: {request.country}")
         st.write(f"• **Dates**: {request.checkin_date} to {request.checkout_date}")
-        st.write(f"• **Travelers**: {request.adults} adult{'s' if request.adults != 1 else ''}")
+        st.write(
+            f"• **Travelers**: {request.adults} adult{'s' if request.adults != 1 else ''}"
+        )
         st.write(f"• **Rooms**: {request.rooms}")
 
     with overview_col2:
@@ -391,10 +419,12 @@ def display_summary_dashboard(results: Dict, request: TravelRequest):
             st.write(f"• **Attraction Focus**: {request.attraction_focus}")
 
     # Budget analysis
-    if summary.get('estimated_budget'):
+    if summary.get("estimated_budget"):
         st.markdown("### 💰 Budget Estimation")
         st.info(f"💡 **Estimated Total Cost**: {summary['estimated_budget']}")
-        st.caption("*Includes accommodation and estimated extras (food, transport, activities)")
+        st.caption(
+            "*Includes accommodation and estimated extras (food, transport, activities)"
+        )
 
 
 def create_export_options(results: Dict, request: TravelRequest):
@@ -411,20 +441,20 @@ def create_export_options(results: Dict, request: TravelRequest):
             data=json_data,
             file_name=f"travel_plan_{request.city}_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
             mime="application/json",
-            use_container_width=True
+            use_container_width=True,
         )
 
     with col2:
         # CSV export for hotels
-        if results.get('hotels', {}).get('hotels'):
-            hotels_df = pd.DataFrame(results['hotels']['hotels'])
+        if results.get("hotels", {}).get("hotels"):
+            hotels_df = pd.DataFrame(results["hotels"]["hotels"])
             csv_data = hotels_df.to_csv(index=False)
             st.download_button(
                 label="🏨 Hotels CSV",
                 data=csv_data,
                 file_name=f"hotels_{request.city}_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                use_container_width=True,
             )
 
     with col3:
@@ -435,7 +465,7 @@ def create_export_options(results: Dict, request: TravelRequest):
             data=summary_text,
             file_name=f"travel_summary_{request.city}_{datetime.now().strftime('%Y%m%d')}.txt",
             mime="text/plain",
-            use_container_width=True
+            use_container_width=True,
         )
 
     # Sharing options
@@ -445,16 +475,19 @@ def create_export_options(results: Dict, request: TravelRequest):
     with sharing_col1:
         if st.button("📧 Email Plan", use_container_width=True):
             st.info(
-                "💡 **Email Integration**: You can copy the text summary above and email it, or integrate with your email service.")
+                "💡 **Email Integration**: You can copy the text summary above and email it, or integrate with your email service."
+            )
 
     with sharing_col2:
         if st.button("📱 Mobile Share", use_container_width=True):
-            st.info("💡 **Mobile Sharing**: Access this page on mobile to share via your preferred messaging app.")
+            st.info(
+                "💡 **Mobile Sharing**: Access this page on mobile to share via your preferred messaging app."
+            )
 
     with sharing_col3:
         if st.button("🔄 Plan Again", use_container_width=True):
             st.session_state.travel_results = None
-            st.session_state.planning_stage = 'input'
+            st.session_state.planning_stage = "input"
             st.rerun()
 
 
@@ -474,28 +507,34 @@ def create_text_summary(results: Dict, request: TravelRequest) -> str:
     lines.append("")
 
     # Attractions
-    attractions = results.get('attractions', {}).get('attractions', [])
+    attractions = results.get("attractions", {}).get("attractions", [])
     if attractions:
         lines.append("🎯 TOP ATTRACTIONS")
         for i, attr in enumerate(attractions[:10], 1):
             lines.append(f"{i}. {attr.get('name', 'Unknown')}")
-            if attr.get('description'):
+            if attr.get("description"):
                 lines.append(f"   {attr['description'][:100]}...")
         lines.append("")
 
     # Hotels
-    hotels = results.get('hotels', {}).get('hotels', [])
+    hotels = results.get("hotels", {}).get("hotels", [])
     if hotels:
         lines.append("🏨 RECOMMENDED HOTELS")
         for i, hotel in enumerate(hotels[:5], 1):
             lines.append(f"{i}. {hotel.get('name', 'Unknown')}")
-            lines.append(f"   Price: {hotel.get('price', 'N/A')} {hotel.get('currency', request.currency)}/night")
-            lines.append(f"   Rating: {hotel.get('review_score', 'N/A')}/10 ({hotel.get('review_count', 0)} reviews)")
-            lines.append(f"   Distance to attractions: {hotel.get('distance_to_attractions', 'N/A')}km")
+            lines.append(
+                f"   Price: {hotel.get('price', 'N/A')} {hotel.get('currency', request.currency)}/night"
+            )
+            lines.append(
+                f"   Rating: {hotel.get('review_score', 'N/A')}/10 ({hotel.get('review_count', 0)} reviews)"
+            )
+            lines.append(
+                f"   Distance to attractions: {hotel.get('distance_to_attractions', 'N/A')}km"
+            )
         lines.append("")
 
     # Itinerary
-    itinerary = results.get('itinerary', {}).get('itinerary', {})
+    itinerary = results.get("itinerary", {}).get("itinerary", {})
     if itinerary:
         lines.append("🗓️ DAILY ITINERARY")
         for day, activities in itinerary.items():
@@ -519,11 +558,12 @@ def main():
         page_title="AI Travel Planner",
         page_icon="✈️",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="expanded",
     )
 
     # Custom CSS for better styling
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     .main-header {
         background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
@@ -554,15 +594,20 @@ def main():
         border-radius: 5px;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # Header
-    st.markdown("""
+    st.markdown(
+        """
     <div class="main-header">
         <h1>✈️ AI-Powered Travel Planner</h1>
         <p>Intelligent recommendations for attractions, hotels, and itineraries using multiple AI agents</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     initialize_session_state()
 
@@ -577,21 +622,21 @@ def main():
     with col1:
         if st.button("🚀 Plan My Trip", type="primary", use_container_width=True):
             app = Graph()
-            hotel_params = {"country": travel_request.country,
-                            "city": travel_request.city,
-                            "checkin_date": travel_request.checkin_date,
-                            "checkout_date": travel_request.checkout_date,
-                            "min_price": travel_request.min_price,
-                            "max_price": travel_request.max_price,
-                            "room_number": travel_request.rooms,
-                            "adults_number": travel_request.adults,
-                            "currency": travel_request.currency,
-                            "stars": travel_request.star_classes,
-                            "min_review_score": travel_request.min_review_score,
-                            "max_hotels": travel_request.max_hotels, }
+            hotel_params = {
+                "country": travel_request.country,
+                "city": travel_request.city,
+                "checkin_date": travel_request.checkin_date,
+                "checkout_date": travel_request.checkout_date,
+                "min_price": travel_request.min_price,
+                "max_price": travel_request.max_price,
+                "room_number": travel_request.rooms,
+                "adults_number": travel_request.adults,
+                "currency": travel_request.currency,
+                "stars": travel_request.star_classes,
+                "min_review_score": travel_request.min_review_score,
+                "max_hotels": travel_request.max_hotels,
+            }
             app.run(travel_request.country, travel_request.city, "", hotel_params)
-
-
 
             with st.spinner("🤖 AI agents are working on your travel plan..."):
                 try:
@@ -602,11 +647,9 @@ def main():
                     status_text.text("🎯 Finding attractions...")
                     progress_bar.progress(25)
 
-
-
                     progress_bar.progress(100)
                     status_text.text("✅ Complete!")
-                    st.session_state.planning_stage = 'results'
+                    st.session_state.planning_stage = "results"
 
                     # Clear progress indicators
                     progress_bar.empty()
@@ -625,45 +668,47 @@ def main():
             with st.expander("See planning details", expanded=True):
                 st.json(travel_request.__dict__)
 
-
-
     # Display results
     if st.session_state.travel_results:
         results = st.session_state.travel_results
 
-        if results.get('status') == 'success':
+        if results.get("status") == "success":
             # Success notification
-            st.markdown('<div class="status-success">✅ Your comprehensive travel plan is ready!</div>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                '<div class="status-success">✅ Your comprehensive travel plan is ready!</div>',
+                unsafe_allow_html=True,
+            )
             st.balloons()  # Celebratory animation
 
             # Create main tabs for results
-            tab1, tab2, tab3, tab4, tab5 = st.tabs([
-                "📋 Dashboard",
-                "🎯 Attractions",
-                "🏨 Hotels",
-                "🗓️ Itinerary",
-                "📤 Export"
-            ])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(
+                [
+                    "📋 Dashboard",
+                    "🎯 Attractions",
+                    "🏨 Hotels",
+                    "🗓️ Itinerary",
+                    "📤 Export",
+                ]
+            )
 
             # with tab1:
             #     display_summary_dashboard(results, travel_request)
 
             with tab2:
-                if results.get('attractions'):
-                    display_attractions(results['attractions'])
+                if results.get("attractions"):
+                    display_attractions(results["attractions"])
                 else:
                     st.warning("No attraction data available")
 
             with tab3:
-                if results.get('hotels'):
-                    display_hotels(results['hotels'], travel_request.currency)
+                if results.get("hotels"):
+                    display_hotels(results["hotels"], travel_request.currency)
                 else:
                     st.warning("No hotel data available")
 
             with tab4:
-                if results.get('itinerary'):
-                    display_itinerary(results['itinerary'])
+                if results.get("itinerary"):
+                    display_itinerary(results["itinerary"])
                 else:
                     st.warning("No itinerary data available")
 
@@ -672,12 +717,17 @@ def main():
 
         else:
             # Error display
-            error_msg = results.get('error_message', results.get('message', 'Unknown error'))
-            st.markdown(f'<div class="status-error">❌ Planning failed: {error_msg}</div>', unsafe_allow_html=True)
+            error_msg = results.get(
+                "error_message", results.get("message", "Unknown error")
+            )
+            st.markdown(
+                f'<div class="status-error">❌ Planning failed: {error_msg}</div>',
+                unsafe_allow_html=True,
+            )
 
             # Show request details for debugging
             with st.expander("🔍 Request Details (for debugging)"):
-                st.json(results.get('request', {}))
+                st.json(results.get("request", {}))
 
             # Retry button
             if st.button("🔄 Try Again"):
@@ -689,7 +739,8 @@ def main():
         col1, col2 = st.columns([2, 1])
 
         with col1:
-            st.markdown("""
+            st.markdown(
+                """
             ### 🌟 Welcome to AI Travel Planner
 
             This intelligent travel planning system uses multiple specialized AI agents to create your perfect trip:
@@ -706,11 +757,13 @@ def main():
             4. **Export or share** your complete travel plan
 
             **👈 Start by filling out your preferences in the sidebar!**
-            """)
+            """
+            )
 
         with col2:
             # Quick stats or tips
-            st.markdown("""
+            st.markdown(
+                """
             ### 📊 Planning Stats
             - **Multi-Agent AI** coordination
             - **Real-time** hotel and attraction data
@@ -723,7 +776,8 @@ def main():
             - Set realistic budgets for better recommendations
             - Consider travel mode for itinerary optimization
             - Save multiple plans for comparison
-            """)
+            """
+            )
 
         # Feature highlights
         st.markdown("### ✨ Key Features")
@@ -731,31 +785,37 @@ def main():
         feature_col1, feature_col2, feature_col3 = st.columns(3)
 
         with feature_col1:
-            st.markdown("""
+            st.markdown(
+                """
             #### 🎯 Smart Discovery
             - AI-powered attraction finding
             - Customizable focus themes
             - Local insights and hidden gems
             - Coordinate-based recommendations
-            """)
+            """
+            )
 
         with feature_col2:
-            st.markdown("""
+            st.markdown(
+                """
             #### 🏨 Intelligent Matching
             - Budget-aware recommendations
             - Location optimization scoring
             - Value analysis and ranking
             - Review-based filtering
-            """)
+            """
+            )
 
         with feature_col3:
-            st.markdown("""
+            st.markdown(
+                """
             #### 🗺️ Route Optimization
             - Multi-day trip planning
             - Transportation mode optimization
             - Google Maps integration
             - Time and distance analysis
-            """)
+            """
+            )
 
 
 if __name__ == "__main__":
