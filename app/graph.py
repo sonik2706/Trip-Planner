@@ -18,7 +18,8 @@ from settings.config import Config
 class State(TypedDict, total=False):
     country: str
     city: str
-    user_input: str
+    context: str
+    focus: str
     trip_preferences: dict
     attractions: list
     hotels: list
@@ -60,29 +61,31 @@ class Graph:
 
         return graph.compile()
 
-    def run(self, country: str, city: str, user_input: str, hotel_params: dict) -> dict:
+    def run(self, context: str, hotel_params: dict, focus: str) -> dict:
         initial_state = {
-            "country": country,
-            "city": city,
-            "user_input": user_input,
-            "hotel_params": hotel_params
+            "country": hotel_params["country"],
+            "city": hotel_params["city"],
+            "context": context,
+            "hotel_params": hotel_params,
+            "focus": focus
         }
+
+        print(initial_state)
         return self.graph.invoke(initial_state)
 
     # === Node Functions ===
     def _verify_prompt(self, state: State) -> State:
-        if state.get("user_input", "").strip():
+        if state.get("context", "").strip():
             print("SKIPPING PROMT VERIFICATION!!!")
             return state
 
-        preferences = self.prompt_agent.extract(state["country"], state["city"], state["user_input"])
+        preferences = self.prompt_agent.extract(state["country"], state["city"], state["context"])
         state["trip_preferences"] = preferences
         return state
 
     def _generate_attractions(self, state: State) -> State:
-        prefs = state["trip_preferences"]  # TO BE ADDED!!!
         city = state["city"]
-        focus = prefs.get("focus", None)
+        focus = state["focus"]
         attractions = self.attraction_agent.find_attractions(
             city_name=city, num_attractions=10, focus=focus
         )

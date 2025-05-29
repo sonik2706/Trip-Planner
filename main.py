@@ -636,7 +636,9 @@ def main():
                 "min_review_score": travel_request.min_review_score,
                 "max_hotels": travel_request.max_hotels,
             }
-            app.run(travel_request.country, travel_request.city, "", hotel_params)
+
+            context = ""
+            app.run(context, hotel_params, travel_request.attraction_focus)
 
             with st.spinner("🤖 AI agents are working on your travel plan..."):
                 try:
