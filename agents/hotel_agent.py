@@ -10,6 +10,8 @@ from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
+from Utils.json_formatter import GenericLLMFormatter
+
 
 class HotelAgent:
     def __init__(self, config):
@@ -525,11 +527,11 @@ class HotelAgent:
             min_review_score: float = 7.0,
             preferred_star_classes: Optional[List[int]] = None,
             use_agent: bool = True
-    ) -> Dict:
+    ) -> str:
         """Rekomendacje hoteli na podstawie atrakcji i preferencji"""
         print(f"🎯 Szukam rekomendacji dla {city} z {len(attractions)} atrakcjami")
 
-        return self.search_hotels(
+        raw_data = self.search_hotels(
             city=city,
             checkin_date=checkin_date,
             checkout_date=checkout_date,
@@ -542,3 +544,17 @@ class HotelAgent:
             attractions=attractions,
             use_agent=use_agent
         )
+
+        formatter = GenericLLMFormatter(
+            llm=self.llm,
+            prompt_template_str=self.prompts["hotel_json_formatter_template"],
+            input_variables=["raw_data", "city"]
+        )
+
+        json_data = formatter.run(
+            raw_data=raw_data,
+            city=city
+        )
+        print(json_data)
+        return json.dumps(json_data, indent=2, ensure_ascii=False)
+

@@ -59,7 +59,7 @@ search_template: |
      - Suggest alternative dates if prices are high
      - Recommend similar areas with better value
   
-  PRESENTATION FORMAT:
+  PRESENTATION FORMAT IN YOUR FINAL ANSWER:
   For each recommended hotel, include:
   🏨 Hotel Name (⭐ rating)
   💰 Price per night in local currency  
@@ -125,3 +125,45 @@ filter_template: |
   - Value assessment explanation
   - Ranking methodology transparency  
   - Alternative suggestions if primary criteria too restrictive
+  
+hotel_json_formatter_template: |
+  Based on the following AI-generated hotel recommendation summary, convert it into a structured JSON format.
+
+  Text:
+  {raw_data}
+
+  Output should be a valid JSON with the following format:
+  {{
+    "city": "{city}",
+    "categories": [
+      {{
+        "name": "Best Value",
+        "hotels": [
+          {{
+            "name": "Hotel Name",
+            "price_eur": 0.0,
+            "price_usd": 0.0,
+            "stars": 0,
+            "review_score": 0.0,
+            "review_count": 0,
+            "average_distance_km": 0.0,
+            "value_score": 0.0,
+            "link": "https://...",
+            "why_recommended": "Short explanation"
+          }},
+          ...
+        ]
+      }},
+      ...
+    ],
+    "pro_tips": [
+      "tip 1",
+      "tip 2",
+      ...
+    ]
+  }}
+
+  Notes:
+  - You must extract all hotel details, including category name and why each hotel was recommended.
+  - If prices are in both EUR and USD, extract both as numbers.
+  - Do not include any extra explanations. Output must be JSON only.

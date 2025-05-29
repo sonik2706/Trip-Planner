@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from typing import Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+
+from Utils.json_formatter import GenericLLMFormatter
 from agents.utils.prompt import load_prompts
 
 class AttractionAgent:
@@ -77,8 +79,9 @@ class AttractionAgent:
         raw_data = self.data_gathering_agent.invoke(data_gathering_prompt)
 
         # Now use a separate LLM call to format the results as JSON
-        json_formatter_prompt = PromptTemplate(
-            template=self.prompts["json_formatter_template"],
+        formatter = GenericLLMFormatter(
+            llm=self.llm,
+            prompt_template_str=self.prompts["json_formatter_template"],
             input_variables=[
                 "city_name",
                 "raw_data",
@@ -87,47 +90,29 @@ class AttractionAgent:
             ],
         )
 
-        json_formatter_chain = LLMChain(llm=self.llm, prompt=json_formatter_prompt)
-
-        # Format the raw data into JSON
-        json_response = json_formatter_chain.run(
-            {
-                "city_name": city_name,
-                "raw_data": raw_data,
-                "focus_or_general": focus if focus else "general",
-                "num_attractions": num_attractions,
-            }
+        json_data = formatter.run(
+            city_name=city_name,
+            raw_data=raw_data,
+            focus_or_general=focus if focus else "general",
+            num_attractions=num_attractions,
         )
 
         # Clean up and parse the JSON
-        try:
-            # Find JSON content (looking for content between curly braces)
-            start_idx = json_response.find("{")
-            end_idx = json_response.rfind("}") + 1
-            if start_idx >= 0 and end_idx > 0:
-                json_str = json_response[start_idx:end_idx]
-                # Validate by parsing
-                json_data = json.loads(json_str)
+        if isinstance(json_data, dict) and "attractions" in json_data:
+            while len(json_data["attractions"]) < num_attractions:
+                json_data["attractions"].append({
+                    "name": f"Additional Attraction #{len(json_data['attractions']) + 1}",
+                    "description": "Information about this attraction was supplemented based on general knowledge.",
+                })
 
-                # Ensure we have exactly the requested number of attractions
-                while len(json_data["attractions"]) < num_attractions:
-                    json_data["attractions"].append(
-                        {
-                            "name": f"Additional Attraction #{len(json_data['attractions']) + 1}",
-                            "description": "Information about this attraction was supplemented based on general knowledge.",
-                        }
-                    )
-                    for attraction in json_data["attractions"]:
-                        # Remove fun_facts if it wasn't found
-                        if "fun_facts" in attraction and (
-                            not attraction["fun_facts"]
-                            or attraction["fun_facts"] == "Not available"
-                        ):
-                            del attraction["fun_facts"]
+            for attraction in json_data["attractions"]:
+                if "fun_facts" in attraction and (
+                        not attraction["fun_facts"] or attraction["fun_facts"] == "Not available"
+                ):
+                    del attraction["fun_facts"]
 
-                # Return beautified JSON
-                return json.dumps(json_data, indent=2, ensure_ascii=False)
-            return json_response  # Return original if no JSON found
-        except json.JSONDecodeError:
-            # If parsing fails, return the original response
-            return json_response
+            # print(json.dumps(json_data, indent=2, ensure_ascii=False))
+            return json.dumps(json_data, indent=2, ensure_ascii=False)
+        else:
+            return json_data  # fallback (could be raw string)
+

@@ -1,0 +1,31 @@
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+import json
+
+class GenericLLMFormatter:
+    def __init__(self, llm, prompt_template_str: str, input_variables: list[str]):
+        """
+        llm: LLM to be used (e.g., ChatGoogleGenerativeAI)
+        prompt_template_str: raw string template (with placeholders)
+        input_variables: list of variables used in the template
+        """
+        self.prompt = PromptTemplate(
+            template=prompt_template_str,
+            input_variables=input_variables
+        )
+        self.chain = LLMChain(llm=llm, prompt=self.prompt)
+
+    def run(self, **kwargs) -> dict | str:
+        """
+        Runs the formatter chain with dynamic keyword arguments
+        Returns: parsed JSON or raw string if parsing fails
+        """
+        response = self.chain.run(kwargs)
+        try:
+            start = response.find("{")
+            end = response.rfind("}") + 1
+            if start >= 0 and end > start:
+                return json.loads(response[start:end])
+            return response
+        except json.JSONDecodeError:
+            return response
