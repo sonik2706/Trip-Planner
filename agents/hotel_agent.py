@@ -348,11 +348,11 @@ class HotelAgent:
 
     def _calculate_distance_score_detailed(self, hotel_coords, attractions):
         """Oblicz szczegółową odległość do atrakcji - NAPRAWIONA WERSJA"""
-        print(f"🔍 Sprawdzam odległość dla hotelu: {hotel_coords}")
-        print(f"🎯 Liczba atrakcji: {len(attractions) if attractions else 0}")
+        # print(f"🔍 Sprawdzam odległość dla hotelu: {hotel_coords}")
+        # print(f"🎯 Liczba atrakcji: {len(attractions) if attractions else 0}")
 
         if not hotel_coords or not attractions:
-            print("❌ Brak współrzędnych hotelu lub atrakcji")
+            # print("❌ Brak współrzędnych hotelu lub atrakcji")
             return float('inf')
 
         try:
@@ -365,21 +365,21 @@ class HotelAgent:
                     lon_diff = hotel_coords[1] - attr_coords[1]
                     distance = ((lat_diff ** 2) + (lon_diff ** 2)) ** 0.5 * 111
                     distances.append(distance)
-                    print(f"  📍 {attraction.get('name', f'Atrakcja {i + 1}')}: {distance:.2f}km")
-                else:
-                    print(f"  ❌ Atrakcja {i + 1} nie ma poprawnych współrzędnych")
+                    # print(f"  📍 {attraction.get('name', f'Atrakcja {i + 1}')}: {distance:.2f}km")
+                # else:
+                    # print(f"  ❌ Atrakcja {i + 1} nie ma poprawnych współrzędnych")
 
             if distances:
                 avg_distance = sum(distances) / len(distances)
                 result = round(avg_distance, 2)
-                print(f"  ✅ Średnia odległość: {result}km")
+                # print(f"  ✅ Średnia odległość: {result}km")
                 return result
-            else:
-                print("  ❌ Żadna atrakcja nie ma poprawnych współrzędnych")
-                return float('inf')
+            # else:
+            #     print("  ❌ Żadna atrakcja nie ma poprawnych współrzędnych")
+            #     return float('inf')
 
         except Exception as e:
-            print(f"  ❌ Błąd obliczania odległości: {e}")
+            # print(f"  ❌ Błąd obliczania odległości: {e}")
             return float('inf')
 
     def _calculate_distance_score(self, hotel: Dict, attractions: List[Dict]) -> float:
@@ -555,6 +555,6 @@ class HotelAgent:
             raw_data=raw_data,
             city=city
         )
-        print(json_data)
+        print(json.dumps(json_data, indent=2, ensure_ascii=False))
         return json.dumps(json_data, indent=2, ensure_ascii=False)
 

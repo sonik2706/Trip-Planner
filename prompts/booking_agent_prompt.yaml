@@ -59,7 +59,6 @@ search_template: |
      - Suggest alternative dates if prices are high
      - Recommend similar areas with better value
   
-  PRESENTATION FORMAT IN YOUR FINAL ANSWER:
   For each recommended hotel, include:
   🏨 Hotel Name (⭐ rating)
   💰 Price per night in local currency  
@@ -68,6 +67,8 @@ search_template: |
   🎯 Value score: X.XXX
   🔗 Direct booking link
   💡 Why recommended: [key strengths]
+  
+  FOR FINAL ANSWER SHOW 3 HOTELS IN EVERY CATEGORY EXALCY AS SHOWN IN "4. **Smart Recommendations**" and PRO TIPS AS SHOWN IN "5. **Pro Tips**:"
   
   Remember: Your goal is to be genuinely helpful, not just return data. Think like a local travel expert who wants visitors to have the best possible experience within their means.
 
@@ -141,8 +142,8 @@ hotel_json_formatter_template: |
         "hotels": [
           {{
             "name": "Hotel Name",
-            "price_eur": 0.0,
-            "price_usd": 0.0,
+            "price": 0.0,
+            "currency": 0.0,
             "stars": 0,
             "review_score": 0.0,
             "review_count": 0,

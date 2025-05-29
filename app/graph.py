@@ -70,8 +70,23 @@ class Graph:
             "focus": focus
         }
 
-        print(initial_state)
-        return self.graph.invoke(initial_state)
+        print("Initial state:", initial_state)
+
+        try:
+            # Run the graph
+            final_state = self.graph.invoke(initial_state)
+            print("Final state:", final_state)
+
+            # Return the raw state - frontend will format it
+            return final_state
+
+        except Exception as e:
+            print(f"Graph execution error: {e}")
+            return {
+                "status": "error",
+                "error_message": str(e),
+                "request": initial_state
+            }
 
     # === Node Functions ===
     def _verify_prompt(self, state: State) -> State:
