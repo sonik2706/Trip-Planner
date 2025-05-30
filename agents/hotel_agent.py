@@ -555,6 +555,6 @@ class HotelAgent:
             raw_data=raw_data,
             city=city
         )
-        print(json.dumps(json_data, indent=2, ensure_ascii=False))
+        # print(json.dumps(json_data, indent=2, ensure_ascii=False))
         return json.dumps(json_data, indent=2, ensure_ascii=False)
 
