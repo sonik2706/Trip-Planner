@@ -816,6 +816,8 @@ def main():
 
     initialize_session_state()
 
+    app = Graph()
+    app.visualize_graph()
     # Show agent status
 
     # Get user inputs from sidebar
@@ -826,7 +828,6 @@ def main():
 
     with col1:
         if st.button("🚀 Plan My Trip", type="primary", use_container_width=True):
-            app = Graph()
             hotel_params = {
                 "country": travel_request.country,
                 "city": travel_request.city,
@@ -855,6 +856,7 @@ def main():
 
                     # Run the graph and get results
                     raw_results = app.run(context, hotel_params, travel_request.attraction_focus, travel_request.num_attractions)
+
                     st.write("DEBUG: Raw results from Graph:")
                     st.json(raw_results)  # Debug - pokaż surowe wyniki
 

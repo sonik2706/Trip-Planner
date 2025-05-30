@@ -13,7 +13,7 @@ from agents.utils.prompt import load_prompts
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate, load_prompt
-from Utils.json_formatter import GenericLLMFormatter
+from agents.utils.json_formatter import GenericLLMFormatter
 
 class MapAgent:
     def __init__(self, config, model_temperature: float = 0.0):

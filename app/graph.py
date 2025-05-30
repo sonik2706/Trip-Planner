@@ -7,7 +7,7 @@ from datetime import datetime
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
 
-from Utils.LocationGeocoder import LocationGeocoder
+from agents.utils.LocationGeocoder import LocationGeocoder
 from agents.prompt_agent import PromptAgent
 from agents.attraction_agent import AttractionAgent
 from agents.hotel_agent import HotelAgent

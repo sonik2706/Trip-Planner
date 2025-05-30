@@ -10,7 +10,7 @@ from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
-from Utils.json_formatter import GenericLLMFormatter
+from agents.utils.json_formatter import GenericLLMFormatter
 
 
 class HotelAgent:

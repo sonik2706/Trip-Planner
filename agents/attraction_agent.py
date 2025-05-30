@@ -10,7 +10,7 @@ from typing import Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
-from Utils.json_formatter import GenericLLMFormatter
+from agents.utils.json_formatter import GenericLLMFormatter
 from agents.utils.prompt import load_prompts
 
 class AttractionAgent:
