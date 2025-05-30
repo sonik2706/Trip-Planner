@@ -25,6 +25,7 @@ class State(TypedDict, total=False):
     hotels: list
     itinerary: dict
     hotel_params: dict
+    num_attractions: int
 
 
 class Graph:
@@ -42,30 +43,29 @@ class Graph:
         # Define nodes
         graph.add_node("verify_prompt", self._verify_prompt)
         graph.add_node("search_for_attractions", self._generate_attractions)
-        graph.add_node("find_hotels", self._generate_hotels)
+        # graph.add_node("find_hotels", self._generate_hotels)
         # graph.add_node("plan_the_trip", self._build_itinerary)
         # graph.add_node("generate_response", self._generate_response)
 
         # Set entry and conditional routing
         graph.set_entry_point("verify_prompt")
-
         graph.add_edge("verify_prompt", "search_for_attractions")
-        graph.add_edge("search_for_attractions", "find_hotels")
-
+        # graph.add_edge("search_for_attractions", "find_hotels")
         # Final steps
         # graph.add_edge("find_hotels", "plan_the_trip")
         # graph.add_edge("plan_the_trip", "generate_response")
-        # graph.add_edge("generate_response", END)
+        graph.add_edge("search_for_attractions", END)
 
         self._raw_graph = graph
 
         return graph.compile()
 
-    def run(self, context: str, hotel_params: dict, focus: str) -> dict:
+    def run(self, context: str, hotel_params: dict, focus: str, num_attractions: int) -> dict:
         initial_state = {
             "country": hotel_params["country"],
             "city": hotel_params["city"],
             "context": context,
+            "num_attractions": num_attractions,
             "hotel_params": hotel_params,
             "focus": focus
         }
@@ -73,13 +73,9 @@ class Graph:
         print("Initial state:", initial_state)
 
         try:
-            # Run the graph
             final_state = self.graph.invoke(initial_state)
-            print("Final state:", final_state)
-
-            # Return the raw state - frontend will format it
+            print(final_state)
             return final_state
-
         except Exception as e:
             print(f"Graph execution error: {e}")
             return {
@@ -90,6 +86,7 @@ class Graph:
 
     # === Node Functions ===
     def _verify_prompt(self, state: State) -> State:
+        print("Verifying prompt...")
         if state.get("context", "").strip():
             print("SKIPPING PROMT VERIFICATION!!!")
             return state
@@ -99,15 +96,18 @@ class Graph:
         return state
 
     def _generate_attractions(self, state: State) -> State:
+        print("Generating attractions...")
         city = state["city"]
         focus = state["focus"]
+        num_attractions = state["num_attractions"]
         attractions = self.attraction_agent.find_attractions(
-            city_name=city, num_attractions=10, focus=focus
+            city_name=city, num_attractions=num_attractions, focus=focus
         )
         state["attractions"] = attractions
         return state
 
     def _generate_hotels(self, state: State) -> State:
+        print("Finding hotels...")
         hotel_params = state["hotel_params"]
         attractions = state["attractions"]
         geocoder = LocationGeocoder()
@@ -124,10 +124,9 @@ class Graph:
         return state
 
     def _build_itinerary(self, state: State) -> State:
-        city = state["trip_preferences"].get("city", "Rome")
-        accomodation = (
-            state["hotels"][0]["location"] if state["hotels"] else "city center"
-        )
+        print("Generating itinery...")
+        
+        accomodation = "city center"
         days = 3
         attractions = [a["name"] for a in state["attractions"]]
         itinerary = self.map_agent.optimize(

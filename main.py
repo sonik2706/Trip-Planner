@@ -893,7 +893,7 @@ def main():
                     progress_bar.progress(25)
 
                     # Run the graph and get results
-                    raw_results = app.run(context, hotel_params, travel_request.attraction_focus)
+                    raw_results = app.run(context, hotel_params, travel_request.attraction_focus, travel_request.num_attractions)
                     st.write("DEBUG: Raw results from Graph:")
                     st.json(raw_results)  # Debug - pokaż surowe wyniki
 
