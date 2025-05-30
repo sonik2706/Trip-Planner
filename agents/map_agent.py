@@ -13,7 +13,7 @@ from agents.utils.prompt import load_prompts
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate, load_prompt
-
+from Utils.json_formatter import GenericLLMFormatter
 
 class MapAgent:
     def __init__(self, config, model_temperature: float = 0.0):
@@ -65,6 +65,7 @@ class MapAgent:
             llm=self.llm,
             agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
             verbose=True,
+            handle_parsing_errors=True
         )
 
     def _get_eta_from_string(self, query: str) -> str:
@@ -203,7 +204,7 @@ class MapAgent:
         city: str,
         days: int,
         accomodation_address: str,
-        list_attractions: list,
+        attractions: list,
         focus: Literal["walking", "driving", "transit"] = "transit",
     ) -> Dict:
         """
@@ -222,10 +223,22 @@ class MapAgent:
             city=city,
             focus=focus,
             days=days,
-            accomodation_address=accomodation_address,
-            list_attractions="\n".join(f"- {place}" for place in list_attractions),
+            accomodation_address=f"city center, {city}" if accomodation_address == "city center" else accomodation_address,
+            list_attractions=attractions,
         )
 
-        response = self.agent.invoke(prompt)
+        raw_data = self.agent.invoke(prompt)
+        print(raw_data)
 
-        return response
+        formatter = GenericLLMFormatter(
+            llm=self.llm,
+            prompt_template_str=self.prompts["json_formatter_template"],
+            input_variables=["raw_data"]
+        )
+
+        json_data = formatter.run(
+            raw_data=raw_data,
+        )
+        
+        print(json_data)
+        return json.dumps(json_data, indent=2, ensure_ascii=False)

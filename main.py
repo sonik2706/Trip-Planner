@@ -424,50 +424,8 @@ def display_hotel_card(hotel: Dict, travel_request: TravelRequest):
         st.markdown("---")
 
 
-def display_itinerary(itinerary_data: Dict):
-    """Display optimized itinerary"""
-    st.subheader(
-        f"🗓️ {itinerary_data.get('days', 'Multi')}-Day Itinerary for {itinerary_data.get('city', 'Your Destination')}"
-    )
-
-    # Itinerary metrics
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Travel Mode", itinerary_data.get("travel_mode", "Transit").title())
-    with col2:
-        st.metric(
-            "Total Distance", itinerary_data.get("total_distance", "Calculating...")
-        )
-    with col3:
-        st.metric(
-            "Estimated Time", itinerary_data.get("estimated_time", "Calculating...")
-        )
-
-    # Display daily itinerary
-    itinerary = itinerary_data.get("itinerary", {})
-    if isinstance(itinerary, dict):
-        for day, activities in itinerary.items():
-            with st.expander(f"📅 {day}", expanded=True):
-                if isinstance(activities, list):
-                    for activity in activities:
-                        st.write(f"• {activity}")
-                else:
-                    st.write(activities)
-    elif isinstance(itinerary, str):
-        # Handle string result from agent
-        st.write(itinerary)
-    else:
-        st.info("Itinerary optimization in progress...")
-
-    # Maps link
-    maps_link = itinerary_data.get("maps_link")
-    if maps_link:
-        st.markdown(f"🗺️ [Open Optimized Route in Google Maps]({maps_link})")
-
-    # Additional itinerary insights
-    if itinerary_data.get("accommodation"):
-        st.info(f"🏨 **Base Accommodation**: {itinerary_data['accommodation']}")
-
+def display_itinerary(itinerary_json: Dict):
+    st.json(itinerary_json)
 
 def display_summary_dashboard(results: Dict, request: TravelRequest):
     """Display comprehensive summary dashboard"""
@@ -742,7 +700,7 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
                 prices = [h["price"] for h in all_hotels if h["price"] > 0]
                 if prices:
                     avg_price = round(sum(prices) / len(prices), 2)
-
+            
             formatted["hotels"] = {
                 "total_found": len(all_hotels),
                 "budget_hotels_count": len(budget_hotels),
@@ -753,6 +711,9 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
                 # PROBLEM 11: Dodaj all_hotels do wyników
                 "all_hotels": all_hotels
             }
+
+        if "itinerary" in raw_results:
+            formatted["itinerary"] = raw_results["itinerary"]
 
         # Add summary
         formatted["summary"] = {
