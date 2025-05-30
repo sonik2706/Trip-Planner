@@ -43,18 +43,18 @@ class Graph:
         # Define nodes
         graph.add_node("verify_prompt", self._verify_prompt)
         graph.add_node("search_for_attractions", self._generate_attractions)
-        # graph.add_node("find_hotels", self._generate_hotels)
+        graph.add_node("find_hotels", self._generate_hotels)
         # graph.add_node("plan_the_trip", self._build_itinerary)
         # graph.add_node("generate_response", self._generate_response)
 
         # Set entry and conditional routing
         graph.set_entry_point("verify_prompt")
         graph.add_edge("verify_prompt", "search_for_attractions")
-        # graph.add_edge("search_for_attractions", "find_hotels")
+        graph.add_edge("search_for_attractions", "find_hotels")
         # Final steps
         # graph.add_edge("find_hotels", "plan_the_trip")
         # graph.add_edge("plan_the_trip", "generate_response")
-        graph.add_edge("search_for_attractions", END)
+        # graph.add_edge("search_for_attractions", END)
 
         self._raw_graph = graph
 
