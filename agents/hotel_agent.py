@@ -195,7 +195,7 @@ class HotelAgent:
                 coords = [lat, lon] if lat and lon else None
 
                 # Star rating z fallback
-                star_class = hotel.get("class") or hotel.get("hotel_class") or 3
+                star_class = hotel.get("class") or 0
 
                 # Oblicz odległość do atrakcji
                 distance_to_attractions = self._calculate_distance_score_detailed(coords, attractions)
@@ -222,7 +222,7 @@ class HotelAgent:
                     "review_score": review_score,
                     "review_count": hotel.get("review_nr", 0),
                     "location": hotel.get("address", ""),
-                    "link": f"https://www.booking.com/hotel/{hotel.get('hotel_id')}.html",
+                    "link": hotel.get("url", ""),
                     "coords": coords,
                     "hotel_id": hotel.get("hotel_id"),
                     "star_class": int(star_class),

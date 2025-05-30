@@ -409,10 +409,14 @@ def display_hotel_card(hotel: Dict, travel_request: TravelRequest):
             price = hotel.get('price', 0)
             currency = hotel.get('currency', 'EUR')
             st.metric("Price/night", f"{price} {currency}")
-            st.write(f"🏃 {hotel.get('average_distance_km', 0):.1f}km to attractions")
+            distance = hotel.get('average_distance_km')
+            if distance is None:
+                distance = 0
+            st.write(f"🏃 {distance:.1f}km to attractions")
+
 
         with col3:
-            stars = hotel.get('star_class', 3)
+            stars = hotel.get('stars', 0)
             st.write(f"{'⭐' * stars}")
             if hotel.get('link'):
                 st.markdown(f"[Book Now]({hotel['link']})")
