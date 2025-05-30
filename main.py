@@ -191,7 +191,7 @@ def display_attractions(attractions_data: Dict):
         )
 
 
-def display_hotels(hotels_data: Dict, currency: str):
+def display_hotels(hotels_data: Dict, currency: str, travel_request: TravelRequest):
     """Display hotel recommendations with enhanced visualization"""
     st.subheader("🏨 Hotel Recommendations")
 
@@ -204,14 +204,7 @@ def display_hotels(hotels_data: Dict, currency: str):
     with col3:
         st.metric("Alternatives", hotels_data.get("alternative_hotels_count", 0))
     with col4:
-        all_hotels = hotels_data.get("all_hotels", [])
-        if all_hotels:
-            avg_price = sum(h["price"] for h in all_hotels[:5]) / min(5, len(all_hotels))
-            # Get currency from first hotel or use provided currency
-            hotel_currency = all_hotels[0].get("currency", currency) if all_hotels else currency
-            st.metric("Avg Price", f"{avg_price:.0f} {hotel_currency}")
-        else:
-            st.metric("Avg Price", "N/A")
+        st.metric("Avg Price", hotels_data.get("avg_price", 0))
 
     # Show pro tips if available
     if hotels_data.get("pro_tips") and len(hotels_data["pro_tips"]) > 0:
@@ -229,7 +222,7 @@ def display_hotels(hotels_data: Dict, currency: str):
         categories = hotels_data.get("categories", [])
 
         if categories:
-            for category in categories:
+            for i, category in enumerate(categories):
                 category_name = category.get("name", "Recommended")
                 category_hotels = category.get("hotels", [])
 
@@ -246,12 +239,10 @@ def display_hotels(hotels_data: Dict, currency: str):
                     st.markdown(f"*{len(category_hotels)} hotels in this category*")
 
                     # Display hotels in this category
-                    for hotel in category_hotels:
-                        display_hotel_card(hotel)
+                    for j, hotel in enumerate(category_hotels):
+                        display_hotel_card(hotel, travel_request)
 
                     st.markdown("---")
-        else:
-            st.warning("No hotel categories found")
 
     with tab2:
         # Price analysis chart
@@ -325,7 +316,7 @@ def display_hotels(hotels_data: Dict, currency: str):
             st.plotly_chart(fig, use_container_width=True)
 
 
-def display_hotel_card(hotel: Dict):
+def display_hotel_card(hotel: Dict, travel_request: TravelRequest):
     """Display individual hotel card"""
     with st.container():
         # Hotel header with budget indicator
@@ -336,7 +327,7 @@ def display_hotel_card(hotel: Dict):
 
         with col_header2:
             # Budget indicator
-            if hotel.get("in_original_budget", True):
+            if is_hotel_in_budget(hotel, travel_request):
                 st.success("✅ In Budget")
             else:
                 st.warning("💰 Over Budget")
@@ -356,7 +347,7 @@ def display_hotel_card(hotel: Dict):
             price = hotel.get('price', 0)
             currency = hotel.get('currency', 'EUR')
             st.metric("Price/night", f"{price} {currency}")
-            st.write(f"🏃 {hotel.get('distance_to_attractions', 0):.1f}km to attractions")
+            st.write(f"🏃 {hotel.get('average_distance_km', 0):.1f}km to attractions")
 
         with col3:
             stars = hotel.get('star_class', 3)
@@ -365,13 +356,8 @@ def display_hotel_card(hotel: Dict):
                 st.markdown(f"[Book Now]({hotel['link']})")
 
         # Progress bars for scores
-        col1, col2 = st.columns(2)
-        with col1:
-            ranking_score = hotel.get('ranking_score', 0.5)
-            st.progress(ranking_score, text=f"Overall Score: {ranking_score:.2f}")
-        with col2:
-            value_score = hotel.get('value_score', 0.5)
-            st.progress(value_score, text=f"Value Score: {value_score:.2f}")
+        value_score = hotel.get('value_score', 0.5)
+        st.progress(value_score, text=f"Value Score: {value_score:.2f}")
 
         st.markdown("---")
 
@@ -667,8 +653,8 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
                     formatted_hotel = {
                         "name": hotel.get("name", "Unknown Hotel"),
                         "location": hotels_data.get("city", travel_request.city),
-                        "price": hotel.get("price_eur", hotel.get("price_usd", 0)),
-                        "currency": "EUR" if hotel.get("price_eur") else travel_request.currency,
+                        "price": hotel.get("price", 0),
+                        "currency": hotels_data.get("city", travel_request.currency),
                         "review_score": hotel.get("review_score", 0),
                         "review_count": hotel.get("review_count", 0),
                         "star_class": hotel.get("stars", 3),
@@ -685,13 +671,15 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
             # Calculate statistics
             budget_hotels = [h for h in all_hotels if h["in_original_budget"]]
             alternative_hotels = [h for h in all_hotels if not h["in_original_budget"]]
+            avg_price = [h["price"] for h in all_hotels]
 
             formatted["hotels"] = {
                 "total_found": len(all_hotels),
                 "budget_hotels_count": len(budget_hotels),
                 "alternative_hotels_count": len(alternative_hotels),
-                "hotels": all_hotels,
-                "pro_tips": hotels_data.get("pro_tips", [])
+                "categories": hotels_data.get("categories", []),
+                "pro_tips": hotels_data.get("pro_tips", []),
+                "avg_price": round(sum(avg_price)/len(all_hotels), 2)
             }
 
         # Add summary
@@ -715,7 +703,7 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
 
 def is_hotel_in_budget(hotel: Dict, travel_request: TravelRequest) -> bool:
     """Check if hotel is within budget"""
-    price = hotel.get("price_eur", hotel.get("price_usd", 0))
+    price = hotel.get("price", 0)
 
     if travel_request.min_price and price < travel_request.min_price:
         return False
@@ -834,12 +822,16 @@ def main():
 
                     # Run the graph and get results
                     raw_results = app.run(context, hotel_params, travel_request.attraction_focus)
+                    st.write("DEBUG: Raw results from Graph:")
+                    st.json(raw_results)  # Debug - pokaż surowe wyniki
 
                     progress_bar.progress(75)
                     status_text.text("🏨 Finding hotels...")
 
                     # Format results for frontend
                     formatted_results = format_graph_results(raw_results, travel_request)
+                    st.write("DEBUG: Formatted results:")
+                    st.json(formatted_results)  # Debug - pokaż sformatowane wyniki
 
                     progress_bar.progress(100)
                     status_text.text("✅ Complete!")
@@ -899,7 +891,7 @@ def main():
 
             with tab3:
                 if results.get("hotels"):
-                    display_hotels(results["hotels"], travel_request.currency)
+                    display_hotels(results["hotels"], travel_request.currency, travel_request)
                 else:
                     st.warning("No hotel data available")
 
