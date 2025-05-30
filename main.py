@@ -245,75 +245,137 @@ def display_hotels(hotels_data: Dict, currency: str, travel_request: TravelReque
                     st.markdown("---")
 
     with tab2:
-        # Price analysis chart
-        all_hotels = hotels_data.get("all_hotels", [])
+        # PROBLEM 1: Brak `all_hotels` w hotels_data - trzeba je utworzyć z categories
+        all_hotels = []
+        categories = hotels_data.get("categories", [])
+
+        # Zbierz wszystkie hotele z kategorii
+        for category in categories:
+            category_name = category.get("name", "Unknown")
+            for hotel in category.get("hotels", []):
+                hotel_copy = hotel.copy()
+                hotel_copy["category"] = category_name
+                # PROBLEM 2: Dodaj value_score jeśli nie istnieje
+                if "value_score" not in hotel_copy:
+                    hotel_copy["value_score"] = hotel_copy.get("review_score", 7.0) / 10.0
+                # PROBLEM 3: Dodaj distance_to_attractions jeśli nie istnieje
+                if "distance_to_attractions" not in hotel_copy:
+                    hotel_copy["distance_to_attractions"] = hotel_copy.get("average_distance_km", 1.0)
+                all_hotels.append(hotel_copy)
+
         if all_hotels:
             df = pd.DataFrame(all_hotels)
 
-            fig = px.scatter(
-                df,
-                x="price",
-                y="review_score",
-                size="value_score",
-                color="category",
-                hover_data=["name", "distance_to_attractions"],
-                title="Hotel Price vs Quality Analysis",
-                labels={
-                    "price": f"Price ({all_hotels[0].get('currency', currency)})",
-                    "review_score": "Review Score (0-10)",
-                    "category": "Category"
-                }
-            )
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            # PROBLEM 4: Sprawdź czy kolumny istnieją przed użyciem
+            required_columns = ["price", "review_score", "value_score", "category", "name", "distance_to_attractions"]
+            missing_columns = [col for col in required_columns if col not in df.columns]
 
-            # Price distribution by category
-            st.subheader("💰 Price Distribution by Category")
-            category_stats = []
-            for category in hotels_data.get("categories", []):
-                cat_hotels = category.get("hotels", [])
-                if cat_hotels:
-                    prices = [h["price"] for h in cat_hotels]
-                    category_stats.append({
-                        "Category": category.get("name", "Unknown"),
-                        "Hotels": len(cat_hotels),
-                        "Avg Price": f"{sum(prices) / len(prices):.0f}",
-                        "Min Price": f"{min(prices):.0f}",
-                        "Max Price": f"{max(prices):.0f}"
-                    })
+            if not missing_columns:
+                fig = px.scatter(
+                    df,
+                    x="price",
+                    y="review_score",
+                    size="value_score",
+                    color="category",
+                    hover_data=["name", "distance_to_attractions"],
+                    title="Hotel Price vs Quality Analysis",
+                    labels={
+                        "price": f"Price ({df.iloc[0].get('currency', currency)})",
+                        "review_score": "Review Score (0-10)",
+                        "category": "Category"
+                    }
+                )
+                fig.update_layout(height=400)
+                st.plotly_chart(fig, use_container_width=True)
 
-            if category_stats:
-                stats_df = pd.DataFrame(category_stats)
-                st.dataframe(stats_df, use_container_width=True, hide_index=True)
+                # Price distribution by category
+                st.subheader("💰 Price Distribution by Category")
+                category_stats = []
+                for category in categories:
+                    cat_hotels = category.get("hotels", [])
+                    if cat_hotels:
+                        prices = [h["price"] for h in cat_hotels]
+                        category_stats.append({
+                            "Category": category.get("name", "Unknown"),
+                            "Hotels": len(cat_hotels),
+                            "Avg Price": f"{sum(prices) / len(prices):.0f}",
+                            "Min Price": f"{min(prices):.0f}",
+                            "Max Price": f"{max(prices):.0f}"
+                        })
+
+                if category_stats:
+                    stats_df = pd.DataFrame(category_stats)
+                    st.dataframe(stats_df, use_container_width=True, hide_index=True)
+            else:
+                st.error(f"Missing required columns for analysis: {missing_columns}")
+        else:
+            st.warning("No hotel data available for price analysis")
 
     with tab3:
-        # Mock map (replace with real coordinates when available)
-        st.info("🗺️ Map visualization would show hotel locations relative to attractions")
-        all_hotels = hotels_data.get("all_hotels", [])
-        if all_hotels:
-            # Create mock coordinates for demo (you can replace with real coordinates)
-            map_data = pd.DataFrame({
-                "name": [h["name"] for h in all_hotels[:10]],
-                "lat": [50.0647 + i * 0.001 for i in range(min(10, len(all_hotels)))],
-                "lon": [19.9450 + i * 0.001 for i in range(min(10, len(all_hotels)))],
-                "price": [h["price"] for h in all_hotels[:10]],
-                "category": [h["category"] for h in all_hotels[:10]],
-            })
+        # PROBLEM 5: Użyj prawdziwych współrzędnych zamiast mock data
+        all_hotels = []
+        for category in categories:
+            for hotel in category.get("hotels", []):
+                hotel_copy = hotel.copy()
+                hotel_copy["category"] = category.get("name", "Unknown")
+                all_hotels.append(hotel_copy)
 
-            # Color code by category
-            fig = px.scatter_mapbox(
-                map_data,
-                lat="lat",
-                lon="lon",
-                hover_name="name",
-                hover_data=["price", "category"],
-                color="category",
-                zoom=13,
-                height=500,
-                title="Hotel Locations by Category"
-            )
-            fig.update_layout(mapbox_style="open-street-map")
-            st.plotly_chart(fig, use_container_width=True)
+        if all_hotels:
+            map_data = []
+            for i, hotel in enumerate(all_hotels):
+                coord = hotel.get("coordinates", [{}])[0]
+                lat = coord.get("lat")
+                lon = coord.get("lon")
+
+                if lat is not None and lon is not None:
+                    map_data.append({
+                        "name": hotel["name"],
+                        "lat": lat,
+                        "lon": lon,
+                        "price": hotel["price"],
+                        "category": hotel["category"],
+                        "review_score": hotel.get("review_score", 7.0)
+                    })
+
+            if map_data:
+                map_df = pd.DataFrame(map_data)
+
+                # PROBLEM 7: Sprawdź czy plotly może utworzyć mapę
+                try:
+                    fig = px.scatter_mapbox(
+                        map_df,
+                        lat="lat",
+                        lon="lon",
+                        hover_name="name",
+                        hover_data=["price", "category", "review_score"],
+                        color="category",
+                        size="review_score",
+                        zoom=13,
+                        height=500,
+                        title="Hotel Locations by Category",
+                        mapbox_style="open-street-map"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Dodaj prostą mapę Streamlit jako backup
+                    st.subheader("📍 Simple Hotel Locations")
+                    st.map(map_df[["lat", "lon"]], zoom=12)
+
+                except Exception as e:
+                    st.error(f"Error creating interactive map: {e}")
+                    # Fallback do prostej mapy
+                    st.subheader("📍 Hotel Locations")
+                    st.map(map_df[["lat", "lon"]], zoom=12)
+
+                # Hotel details table
+                st.subheader("🏨 Hotel Details")
+                display_df = map_df[["name", "price", "category", "review_score"]].copy()
+                display_df.columns = ["Hotel Name", "Price", "Category", "Review Score"]
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+            else:
+                st.warning("No hotel location data available")
+        else:
+            st.warning("No hotel data available for mapping")
 
 
 def display_hotel_card(hotel: Dict, travel_request: TravelRequest):
@@ -645,7 +707,7 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
             if isinstance(hotels_data, str):
                 hotels_data = json.loads(hotels_data)
 
-            # Flatten all hotels from categories into single list
+            # PROBLEM 8: Popraw zbieranie wszystkich hoteli i dodaj brakujące pola
             all_hotels = []
             for category in hotels_data.get("categories", []):
                 for hotel in category.get("hotels", []):
@@ -654,7 +716,7 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
                         "name": hotel.get("name", "Unknown Hotel"),
                         "location": hotels_data.get("city", travel_request.city),
                         "price": hotel.get("price", 0),
-                        "currency": hotels_data.get("city", travel_request.currency),
+                        "currency": hotel.get("currency", travel_request.currency),
                         "review_score": hotel.get("review_score", 0),
                         "review_count": hotel.get("review_count", 0),
                         "star_class": hotel.get("stars", 3),
@@ -664,14 +726,22 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
                         "link": hotel.get("link", ""),
                         "category": category.get("name", "Recommended"),
                         "why_recommended": hotel.get("why_recommended", "Good option"),
-                        "in_original_budget": is_hotel_in_budget(hotel, travel_request)
+                        "in_original_budget": is_hotel_in_budget(hotel, travel_request),
+                        # PROBLEM 9: Dodaj brakujące pola dla map i analiz
+                        "average_distance_km": hotel.get("average_distance_km", 1.0)
                     }
                     all_hotels.append(formatted_hotel)
 
             # Calculate statistics
             budget_hotels = [h for h in all_hotels if h["in_original_budget"]]
             alternative_hotels = [h for h in all_hotels if not h["in_original_budget"]]
-            avg_price = [h["price"] for h in all_hotels]
+
+            # PROBLEM 10: Zabezpiecz przed dzieleniem przez zero
+            avg_price = 0
+            if all_hotels:
+                prices = [h["price"] for h in all_hotels if h["price"] > 0]
+                if prices:
+                    avg_price = round(sum(prices) / len(prices), 2)
 
             formatted["hotels"] = {
                 "total_found": len(all_hotels),
@@ -679,13 +749,15 @@ def format_graph_results(raw_results: Dict, travel_request: TravelRequest) -> Di
                 "alternative_hotels_count": len(alternative_hotels),
                 "categories": hotels_data.get("categories", []),
                 "pro_tips": hotels_data.get("pro_tips", []),
-                "avg_price": round(sum(avg_price)/len(all_hotels), 2)
+                "avg_price": avg_price,
+                # PROBLEM 11: Dodaj all_hotels do wyników
+                "all_hotels": all_hotels
             }
 
         # Add summary
         formatted["summary"] = {
             "total_attractions": len(formatted.get("attractions", {}).get("attractions", [])),
-            "total_hotels": len(formatted.get("hotels", {}).get("hotels", [])),
+            "total_hotels": formatted.get("hotels", {}).get("total_found", 0),
             "budget_hotels_count": formatted.get("hotels", {}).get("budget_hotels_count", 0),
             "duration": f"{travel_request.trip_days} days",
             "budget_range": get_budget_range_text(travel_request)

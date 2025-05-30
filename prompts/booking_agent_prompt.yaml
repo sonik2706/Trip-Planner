@@ -67,6 +67,7 @@ search_template: |
   🎯 Value score: X.XXX
   🔗 Direct booking link
   💡 Why recommended: [key strengths]
+  🗺️ Coordinates: (XX.XXX, XX.XXX)
   
   FOR FINAL ANSWER SHOW 3 HOTELS IN EVERY CATEGORY EXALCY AS SHOWN IN "4. **Smart Recommendations**" and PRO TIPS AS SHOWN IN "5. **Pro Tips**:"
   
@@ -150,7 +151,13 @@ hotel_json_formatter_template: |
             "average_distance_km": 0.0,
             "value_score": 0.0,
             "link": "https://...",
-            "why_recommended": "Short explanation"
+            "why_recommended": "Short explanation",
+            "coordinates": [
+              {{
+                "lat": 0.0,
+                "lon": 0.0
+              }}
+            ]
           }},
           ...
         ]
