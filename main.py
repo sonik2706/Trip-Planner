@@ -6,7 +6,10 @@ from typing import Dict, List, Optional, Any
 import plotly.express as px
 import plotly.graph_objects as go
 import logging
+import folium
+from streamlit_folium import st_folium
 
+from agents.utils.hotel_filter import HotelFilter
 from app.graph import Graph
 
 
@@ -33,6 +36,8 @@ class TravelRequest:
     attraction_focus: Optional[str] = None
     travel_mode: str = "transit"
     trip_days: int = 3
+    dest_id: Optional[str] = None
+    dest_type: Optional[str] = None
 
 
 def initialize_session_state():
@@ -49,10 +54,75 @@ def create_sidebar_filters():
     """Create sidebar with all planning options"""
     st.sidebar.header("🎯 Travel Planning Options")
 
-    # Basic trip info
     st.sidebar.subheader("📍 Destination")
-    city = st.sidebar.text_input("City", value="Krakow", help="Enter destination city")
-    country = st.sidebar.text_input("Country (optional)", value="Poland")
+
+    # --- City input
+    city = st.sidebar.text_input("City", value="", help="Enter destination city")
+
+    # --- Initialize session flags
+    if "show_map_popup" not in st.session_state:
+        st.session_state.show_map_popup = False
+    if "confirmed_location" not in st.session_state:
+        st.session_state.confirmed_location = None
+
+    dest_data = None
+    locations = []
+
+    if city:
+        try:
+            hotel_filter = HotelFilter()
+            locations = hotel_filter._get_raw_locations(city)
+
+            if locations:
+                # Wybór lokalizacji z listy
+                options = [f"{l['label']} ({l['dest_type']})" for l in locations]
+                selected_index = st.sidebar.selectbox(
+                    "Select Location", list(range(len(options))),
+                    format_func=lambda i: options[i]
+                )
+
+                # Automatyczne zatwierdzenie lokalizacji po wyborze
+                dest_data = locations[selected_index]
+                st.session_state.confirmed_location = dest_data
+
+                # Pokazanie przycisku podglądu mapy
+                if st.sidebar.button("📍 Preview on Map"):
+                    st.session_state.show_map_popup = True
+
+        except Exception as e:
+            st.sidebar.error(f"Failed to fetch location: {e}")
+
+    # --- Wyświetl mapkę w expanderze (pseudo-popup)
+    if st.session_state.show_map_popup and st.session_state.confirmed_location:
+        dest_data = st.session_state.confirmed_location
+        lat = dest_data["latitude"]
+        lon = dest_data["longitude"]
+
+        with st.expander("📍 Location Preview", expanded=True):
+            st.write(f"Selected: {dest_data['label']}")
+            m = folium.Map(location=[lat, lon], zoom_start=13)
+            folium.Marker([lat, lon], tooltip=dest_data["label"]).add_to(m)
+            st_folium(m, use_container_width=True, height=500)
+
+            if st.button("❌ Close preview"):
+                st.session_state.show_map_popup = False
+                st.rerun()
+
+    # --- Final country/dest_id setup
+    if st.session_state.confirmed_location:
+        dest_data = st.session_state.confirmed_location
+        country = dest_data.get("country", "")
+        dest_id = dest_data.get("dest_id", None)
+        dest_type = dest_data.get("dest_type", None)
+        lat = dest_data["latitude"]
+        lon = dest_data["longitude"]
+    else:
+        country = ""
+        dest_id = None
+        lat = lon = None
+
+    # --- Show readonly field for country
+    st.sidebar.text_input("Country (auto-detected)", value=country, disabled=True)
 
     # Dates
     st.sidebar.subheader("📅 Travel Dates")
