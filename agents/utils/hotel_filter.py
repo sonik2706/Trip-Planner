@@ -33,8 +33,8 @@ class HotelFilter:
         checkin_date: str,
         checkout_date: str,
         adults_number: int,
-        children_number: int,
-        children_ages: str,
+        children_number: int = 0,
+        children_ages: str = "",
         locale: str = "en-gb",
         currency: str = "PLN",
         units: str = "metric",
@@ -57,7 +57,6 @@ class HotelFilter:
 
         url = f"https://{self.api_host}/v1/hotels/search-filters"
         params = {
-            "children_ages": children_ages,
             "order_by": order_by,
             "filter_by_currency": currency,
             "dest_id": dest_id,
@@ -66,12 +65,15 @@ class HotelFilter:
             "room_number": room_number,
             "adults_number": adults_number,
             "checkin_date": checkin_date,
-            "children_number": children_number,
             "page_number": page_number,
             "checkout_date": checkout_date,
             "locale": locale,
             "units": units
         }
+
+        if children_number > 0 and children_ages:
+            params["children_number"] = children_number
+            params["children_ages"] = children_ages
 
         try:
             response = r.get(url, headers=headers, params=params)

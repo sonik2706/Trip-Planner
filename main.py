@@ -132,7 +132,9 @@ def create_sidebar_filters():
     with col2:
         checkout = st.date_input("Check-out", value=date.today() + timedelta(days=33))
 
-    trip_days = st.sidebar.slider("Trip duration (days)", 1, 14, 3)
+    # Calculate and display trip duration
+    trip_days = (checkout - checkin).days
+    st.sidebar.info(f"🛏️ **Trip Duration:** {trip_days} day{'s' if trip_days != 1 else ''}")
 
     # Accommodation preferences
     st.sidebar.subheader("🏨 Accommodation")
@@ -920,6 +922,7 @@ def main():
 
     with col1:
         if st.button("🚀 Plan My Trip", type="primary", use_container_width=True):
+            st.session_state.show_map_popup = False
             hotel_params = {
                 "country": travel_request.country,
                 "city": travel_request.city,
