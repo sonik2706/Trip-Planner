@@ -15,17 +15,22 @@ class GenericLLMFormatter:
         )
         self.chain = LLMChain(llm=llm, prompt=self.prompt)
 
-    def run(self, **kwargs) -> dict | str:
+    def run(self, **kwargs) -> dict:
         """
         Runs the formatter chain with dynamic keyword arguments
-        Returns: parsed JSON or raw string if parsing fails
+        Always returns a dict (fallbacks to safe structure if parsing fails)
         """
         response = self.chain.run(kwargs)
         try:
             start = response.find("{")
             end = response.rfind("}") + 1
-            if start >= 0 and end > start:
+            if 0 <= start < end:
                 return json.loads(response[start:end])
-            return response
         except json.JSONDecodeError:
-            return response
+            pass
+
+        # Fallback dict
+        return {
+            "error": "LLM returned non-JSON response",
+            "raw_text": response
+        }

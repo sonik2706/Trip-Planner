@@ -53,7 +53,7 @@ class AttractionAgent:
 
     def find_attractions(
         self, city_name: str, num_attractions: int, focus: Optional[str] = None
-    ) -> str:
+    ) -> dict:
         """
         Retrieve top tourist attractions in a city, optionally filtered by focus.
 
@@ -97,22 +97,5 @@ class AttractionAgent:
             num_attractions=num_attractions,
         )
 
-        # Clean up and parse the JSON
-        if isinstance(json_data, dict) and "attractions" in json_data:
-            while len(json_data["attractions"]) < num_attractions:
-                json_data["attractions"].append({
-                    "name": f"Additional Attraction #{len(json_data['attractions']) + 1}",
-                    "description": "Information about this attraction was supplemented based on general knowledge.",
-                })
-
-            for attraction in json_data["attractions"]:
-                if "fun_facts" in attraction and (
-                        not attraction["fun_facts"] or attraction["fun_facts"] == "Not available"
-                ):
-                    del attraction["fun_facts"]
-
-            # print(json.dumps(json_data, indent=2, ensure_ascii=False))
-            return json.dumps(json_data, indent=2, ensure_ascii=False)
-        else:
-            return json_data  # fallback (could be raw string)
+        return json_data
 

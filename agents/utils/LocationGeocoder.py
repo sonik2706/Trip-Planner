@@ -33,18 +33,14 @@ class LocationGeocoder:
         except Exception:
             return None
 
-    def get_attraction_coordinates(self, data: str) -> List[Dict[str, List[float]]]:
+    def get_attraction_coordinates(self, data: dict) -> List[Dict[str, List[float]]]:
         """
         Given a data dictionary containing a list of attractions,
         returns a list of dicts with name and coordinates.
         """
-        results = []
-        try:
-            data = json.loads(data)
-        except json.JSONDecodeError as e:
-            print(f"JSON decode error: {e}")
-            return results
+        assert isinstance(data, dict), "Expected input data to be a dict"
 
+        results = []
         city = data.get("city", "")
 
         for attraction in data.get("attractions", []):

@@ -22,8 +22,8 @@ class State(TypedDict, total=False):
     context: str
     focus: str
     trip_preferences: dict
-    attractions: list
-    hotels: list
+    attractions: dict
+    hotels: dict
     itinerary: dict
     hotel_params: dict
     num_attractions: int

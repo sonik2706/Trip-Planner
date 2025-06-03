@@ -527,7 +527,7 @@ class HotelAgent:
             min_review_score: float = 7.0,
             preferred_star_classes: Optional[List[int]] = None,
             use_agent: bool = True
-    ) -> str:
+    ) -> dict:
         """Rekomendacje hoteli na podstawie atrakcji i preferencji"""
         print(f"🎯 Szukam rekomendacji dla {city} z {len(attractions)} atrakcjami")
 
@@ -555,6 +555,6 @@ class HotelAgent:
             raw_data=raw_data,
             city=city
         )
-        # print(json.dumps(json_data, indent=2, ensure_ascii=False))
-        return json.dumps(json_data, indent=2, ensure_ascii=False)
+
+        return json_data
 
