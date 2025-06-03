@@ -228,7 +228,6 @@ class MapAgent:
         )
 
         raw_data = self.agent.invoke(prompt)
-        print(raw_data)
 
         formatter = GenericLLMFormatter(
             llm=self.llm,
@@ -241,4 +240,4 @@ class MapAgent:
         )
         
         print(json_data)
-        return json.dumps(json_data, indent=2, ensure_ascii=False)
+        return json_data
