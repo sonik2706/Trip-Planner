@@ -529,6 +529,8 @@ class HotelAgent:
             use_agent: bool = True
     ) -> dict:
         """Rekomendacje hoteli na podstawie atrakcji i preferencji"""
+        # print("DEBUG ATTRACTINS AGENT  !!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(attractions)
         print(f"🎯 Szukam rekomendacji dla {city} z {len(attractions)} atrakcjami")
 
         raw_data = self.search_hotels(

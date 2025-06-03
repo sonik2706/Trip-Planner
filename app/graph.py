@@ -109,7 +109,11 @@ class Graph:
         print("Finding hotels...")
         hotel_params = state["hotel_params"]
         attractions = state["attractions"]
+        # print("DEBUG ATTRACTINS GRAPH !!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(attractions)
         geocoder = LocationGeocoder()
+        # print("DEBUG ATTRACTINS GRAPH GEOCODER !!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(geocoder.get_attraction_coordinates(attractions))
         hotels = self.hotel_agent.get_hotel_recommendations(
             city=hotel_params["city"],
             attractions=geocoder.get_attraction_coordinates(attractions),

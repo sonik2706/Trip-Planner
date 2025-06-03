@@ -1,4 +1,5 @@
 import json
+import time
 
 import requests as r
 from urllib.parse import quote_plus
@@ -13,25 +14,68 @@ class LocationGeocoder:
 
     def get_coordinates(self, location: str) -> List[float] | None:
         """
-        Get the geographic coordinates (latitude and longitude) of a location using Google Maps Geocoding API.
-        Returns None if not found.
+        Try OpenStreetMap first. If it fails, fall back to Google Maps Geocoding API.
         """
+
+        # 🔍 First try OpenStreetMap
+        coords = self._get_from_osm(location)
+        if coords:
+            print(f"[OSM ✅] {location} → {coords}")
+            return coords
+
+        # ❗Fallback to Google
+        for attempt in range(2):
+            try:
+                print(f"[GOOGLE ATTEMPT {attempt + 1}] {location}")
+                coords = self._get_from_google(location)
+                if coords:
+                    print(f"[GOOGLE ✅] {location} → {coords}")
+                    return coords
+            except Exception as e:
+                print(f"[GOOGLE ❌] Error: {e}")
+                time.sleep(1)
+
+        print(f"[FAIL] No coordinates found for: {location}")
+        return None
+
+    def _get_from_osm(self, location: str) -> List[float] | None:
         try:
-            encoded_location = quote_plus(location)
-            url = (
-                f"https://maps.googleapis.com/maps/api/geocode/json"
-                f"?address={encoded_location}&key={self.api_key}"
-            )
-            response = r.get(url)
+            url = f"https://nominatim.openstreetmap.org/search"
+            params = {
+                "q": location,
+                "format": "json",
+                "limit": 1
+            }
+            headers = {
+                "User-Agent": "AITripPlanner/1.0"
+            }
+            response = r.get(url, params=params, headers=headers)
             data = response.json()
 
-            if data["status"] != "OK" or not data["results"]:
+            if not data:
+                print(f"[OSM ❌] No results for: {location}")
                 return None
 
-            location_data = data["results"][0]["geometry"]["location"]
-            return [location_data["lat"], location_data["lng"]]
-        except Exception:
+            return [float(data[0]["lat"]), float(data[0]["lon"])]
+        except Exception as e:
+            print(f"[OSM ❌] Error: {e}")
             return None
+
+    def _get_from_google(self, location: str) -> List[float] | None:
+        encoded_location = quote_plus(location)
+        url = (
+            f"https://maps.googleapis.com/maps/api/geocode/json"
+            f"?address={encoded_location}&key={self.api_key}"
+        )
+        response = r.get(url)
+        data = response.json()
+
+        if data.get("status") != "OK" or not data.get("results"):
+            print(f"[GOOGLE ❌] No results for: {location}")
+            return None
+
+        loc = data["results"][0]["geometry"]["location"]
+        return [loc["lat"], loc["lng"]]
 
     def get_attraction_coordinates(self, data: dict) -> List[Dict[str, List[float]]]:
         """
