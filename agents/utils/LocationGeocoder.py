@@ -5,12 +5,15 @@ import requests as r
 from urllib.parse import quote_plus
 from typing import List, Dict
 
+from agents.utils import location_normalizer
+from agents.utils.location_normalizer import LocationNormalizer
 from settings.config import config
 
 
 class LocationGeocoder:
     def __init__(self):
         self.api_key = config.DISTANCE_MATRIX_API_KEY
+        self.normalizer = LocationNormalizer(config)
 
     def get_coordinates(self, location: str) -> List[float] | None:
         """
@@ -86,14 +89,23 @@ class LocationGeocoder:
 
         results = []
         city = data.get("city", "")
+        attractions = data.get("attractions", [])
 
-        for attraction in data.get("attractions", []):
-            name = attraction.get("name")
-            if not name:
+        # 1. Zbierz nazwy
+        names = [a.get("name") for a in attractions if a.get("name")]
+
+        # 2. Użyj bulk normalizacji
+        normalized_map = self.normalizer.normalize_all(names)
+
+        # 3. Iteruj po atrakcjach
+        for attraction in attractions:
+            original_name = attraction.get("name")
+            if not original_name:
                 continue
-            full_name = f"{name}, {city}"
+            normalized = normalized_map.get(original_name, original_name)
+            full_name = f"{normalized}, {city}"
             coords = self.get_coordinates(full_name)
             if coords:
-                results.append({"name": name, "coords": coords})
+                results.append({"name": original_name, "coords": coords})
 
         return results
