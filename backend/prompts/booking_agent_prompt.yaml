@@ -139,30 +139,24 @@ hotel_json_formatter_template: |
   Output should be a valid JSON with the following format:
   {{
     "city": "{city}",
-    "categories": [
+    "hotels": [
       {{
-        "name": "Best Value",
-        "hotels": [
+        "category_name": "Best Value",
+        "name": "Hotel Name",
+        "price": 0.0,
+        "currency": 0.0,
+        "stars": 0,
+        "review_score": 0.0,
+        "review_count": 0,
+        "average_distance_km": 0.0,
+        "value_score": 0.0,
+        "link": "https://...",
+        "why_recommended": "Short explanation",
+        "coordinates": [
           {{
-            "name": "Hotel Name",
-            "price": 0.0,
-            "currency": 0.0,
-            "stars": 0,
-            "review_score": 0.0,
-            "review_count": 0,
-            "average_distance_km": 0.0,
-            "value_score": 0.0,
-            "link": "https://...",
-            "why_recommended": "Short explanation",
-            "coordinates": [
-              {{
-                "lat": 0.0,
-                "lon": 0.0
-              }}
-            ]
-          }},
-          ...
-        ]
+            "lat": 0.0,
+            "lon": 0.0
+          }}
       }},
       ...
     ],
