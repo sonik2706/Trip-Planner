@@ -8,10 +8,10 @@ from backend.graph import Graph
 
 from frontend.views.home import display_home_screen, create_sidebar_filters
 from frontend.views.attractions import display_attractions
-from frontend.views.hotels import display_hotels
+from frontend.views.hotels import display_hotels, is_hotel_in_budget, get_budget_range_text
 from frontend.views.itinerary import display_itinerary
 from frontend.models.travel_request import TravelRequest
-from frontend.utils import is_hotel_in_budget, get_budget_range_text
+from frontend.utils import load_css
 
 def initialize_session_state():
     """Initialize Streamlit session state"""
@@ -128,43 +128,8 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded",
     )
-
-    # Custom CSS for better styling
-    st.markdown(
-        """
-    <style>
-    .main-header {
-        background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .metric-card {
-        background: #f0f2f6;
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #1e3c72;
-    }
-    .status-success {
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-        padding: 0.5rem;
-        border-radius: 5px;
-    }
-    .status-error {
-        background: #f8d7da;
-        border: 1px solid #f5c6cb;
-        color: #721c24;
-        padding: 0.5rem;
-        border-radius: 5px;
-    }
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
+    
+    load_css("frontend/assets/styles.css")
 
     # Header
     st.markdown(
@@ -277,8 +242,9 @@ def main():
                 ]
             )
 
-            # with tab1:
-            #     display_summary_dashboard(results, travel_request)
+            with tab1:
+                # display_summary_dashboard(results, travel_request)
+                pass
 
             with tab2:
                 if results.get("attractions"):
@@ -298,8 +264,9 @@ def main():
                 else:
                     st.warning("No itinerary data available")
 
-            # with tab5:
-            #     create_export_options(results, travel_request)
+            with tab5:
+                # create_export_options(results, travel_request)
+                pass
 
         else:
             # Error display
