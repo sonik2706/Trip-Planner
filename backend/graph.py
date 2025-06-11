@@ -45,6 +45,7 @@ class Graph:
         graph.add_node("verify_prompt", self._verify_prompt)
         graph.add_node("search_for_attractions", self._generate_attractions)
         graph.add_node("find_hotels", self._generate_hotels)
+        graph.add_node("wait_for_hotel_selection", self._wait_for_hotel_selection)
         graph.add_node("plan_the_trip", self._build_itinerary)
         # graph.add_node("generate_response", self._generate_response)
 
@@ -52,13 +53,14 @@ class Graph:
         graph.set_entry_point("verify_prompt")
         graph.add_edge("verify_prompt", "search_for_attractions")
         graph.add_edge("search_for_attractions", "find_hotels")
-        graph.add_edge("find_hotels", "plan_the_trip")
+        graph.add_edge("find_hotels", "wait_for_hotel_selection")
+        graph.add_edge("wait_for_hotel_selection", "plan_the_trip")
         # graph.add_edge("plan_the_trip", "generate_response")
         # graph.add_edge("plan_the_trip", END)
 
         self._raw_graph = graph
 
-        return graph.compile()
+        return graph.compile(interrupt_before=["wait_for_hotel_selection"])
 
     def run(self, context: str, hotel_params: dict, focus: str, num_attractions: int) -> dict:
         initial_state = {
@@ -73,8 +75,8 @@ class Graph:
         print("Initial state:", initial_state)
 
         try:
-            final_state = self.graph.invoke(initial_state)
-            return final_state
+            state = self.graph.invoke(initial_state)
+            return state
         except Exception as e:
             print(f"Graph execution error: {e}")
             return {
@@ -109,12 +111,9 @@ class Graph:
         print("Finding hotels...")
         hotel_params = state["hotel_params"]
         attractions = state["attractions"]
-        # print("DEBUG ATTRACTINS GRAPH !!!!!!!!!!!!!!!!!!!!!!!!")
-        # print(attractions)
+        
         geocoder = LocationGeocoder()
-        # print("DEBUG ATTRACTINS GRAPH GEOCODER !!!!!!!!!!!!!!!!!!!!!!!!")
-        # print(geocoder.get_attraction_coordinates(attractions))
-        hotels = self.hotel_agent.get_hotel_recommendations(
+        response = self.hotel_agent.get_hotel_recommendations(
             city=hotel_params["city"],
             attractions=geocoder.get_attraction_coordinates(attractions),
             budget_range=(hotel_params["min_price"], hotel_params["max_price"]),
@@ -123,7 +122,22 @@ class Graph:
             checkout_date=hotel_params["checkout_date"],
             use_agent=True,
             currency=hotel_params["currency"],)
-        state["hotels"] = hotels
+        state["hotels"] = response['hotels']
+        
+        return state
+    
+    def _wait_for_hotel_selection(self, state: State):
+        """This node will be interrupted, allowing user interaction"""
+        # This won't execute until user provides input
+        selected_hotel = state.get("selected_hotel")
+        if not selected_hotel:
+            # Make sure hotels are in state for the UI to display
+            if "hotels" not in state:
+                state["error"] = "No hotels available for selection"
+            return state  # Will be interrupted here
+        
+        # Process the selected hotel
+        state["processed_hotel"] = selected_hotel
         return state
 
     def _build_itinerary(self, state: State) -> State:
@@ -135,7 +149,7 @@ class Graph:
         checkout = datetime.fromisoformat(hotel_params["checkout_date"]).date()
         num_days = (checkout - checkin).days
 
-        accomodation = "city center"
+        accomodation = state["processed_hotel"]
         
         attractions = state["attractions"]
         itinerary = self.map_agent.optimize(
