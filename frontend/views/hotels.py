@@ -253,6 +253,8 @@ def display_hotel_card(hotel: Dict, travel_request: TravelRequest):
 
         with col3:
             stars = hotel.get('stars', 0)
+            if stars is None:
+                stars = 0
             st.write(f"{'⭐' * stars}")
             if hotel.get('link'):
                 st.markdown(f"[Book Now]({hotel['link']})")

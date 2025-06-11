@@ -134,7 +134,7 @@ class HotelAgent:
                 "room_number": params.get("room_number", 1),
                 "locale": "en-gb",
                 "currency": params.get("currency", "USD"),
-                "order_by": "popularity",
+                "order_by": "price",
                 "page_number": "0",
                 "units": "metric",
                 "filter_by_currency": params.get("currency", "USD"),
