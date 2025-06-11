@@ -135,10 +135,26 @@ class HotelAgent:
                 "locale": "en-gb",
                 "currency": params.get("currency", "USD"),
                 "order_by": "price",
-                "page_number": "0",
+                "page_number": params.get("page_number", 0),
                 "units": "metric",
                 "filter_by_currency": params.get("currency", "USD"),
             }
+
+            # Initialize categories_filter_ids as an empty list
+            categories_filter_ids = []
+
+            # If star_classes is provided and is not empty
+            if params.get("star_classes"):
+                # Build the star class filter (e.g., "class::2,class::4")
+                star_classes_filter = ",".join([f"class::{star}" for star in params.get("star_classes")])
+                categories_filter_ids.append(star_classes_filter)
+
+            # Add categories_filter_ids to the search query
+            if categories_filter_ids:
+                search_query["categories_filter_ids"] = ",".join(categories_filter_ids)
+
+            # Now the search_query will contain the star classes filter if applicable
+
 
             # Pierwsza próba z filtrami cenowymi
             original_min_price = params.get("min_price")
@@ -453,7 +469,8 @@ class HotelAgent:
             min_review_score: float = 0.0,
             max_hotels: int = 10,
             attractions: Optional[List[Dict]] = None,
-            use_agent: bool = True
+            use_agent: bool = True,
+            page_number: int = 0
     ) -> Dict:
         """Uproszczone wyszukiwanie hoteli - jedna funkcja do wszystkiego"""
 
@@ -491,7 +508,8 @@ class HotelAgent:
                     "star_classes": json.dumps(star_classes or []),
                     "min_review_score": min_review_score,
                     "max_hotels": max_hotels,
-                    "attractions": attractions_json  # JSON string gotowy do wstawienia
+                    "attractions": attractions_json,  # JSON string gotowy do wstawienia
+                    "page_number": page_number
                 }
 
                 prompt = self.prompts.get('search_template', '').format(**template_params)
@@ -526,7 +544,8 @@ class HotelAgent:
             currency: str = "USD",
             min_review_score: float = 7.0,
             preferred_star_classes: Optional[List[int]] = None,
-            use_agent: bool = True
+            use_agent: bool = True,
+            page_number: int = 0
     ) -> dict:
         """Rekomendacje hoteli na podstawie atrakcji i preferencji"""
         # print("DEBUG ATTRACTINS AGENT  !!!!!!!!!!!!!!!!!!!!!!!!")
@@ -542,9 +561,10 @@ class HotelAgent:
             currency=currency,
             star_classes=preferred_star_classes,
             min_review_score=min_review_score,
-            max_hotels=10,
+            max_hotels=20,
             attractions=attractions,
-            use_agent=use_agent
+            use_agent=use_agent,
+            page_number=0,
         )
 
         formatter = GenericLLMFormatter(

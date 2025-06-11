@@ -110,7 +110,7 @@ class Graph:
         hotel_params = state["hotel_params"]
         attractions = state["attractions"]
         # print("DEBUG ATTRACTINS GRAPH !!!!!!!!!!!!!!!!!!!!!!!!")
-        # print(attractions)
+        # print(hotel_params)
         geocoder = LocationGeocoder()
         # print("DEBUG ATTRACTINS GRAPH GEOCODER !!!!!!!!!!!!!!!!!!!!!!!!")
         # print(geocoder.get_attraction_coordinates(attractions))
@@ -122,7 +122,9 @@ class Graph:
             checkin_date=hotel_params["checkin_date"],
             checkout_date=hotel_params["checkout_date"],
             use_agent=True,
-            currency=hotel_params["currency"],)
+            currency=hotel_params["currency"],
+            preferred_star_classes = hotel_params["stars"],
+            page_number = 0)
         state["hotels"] = hotels
         return state
 
