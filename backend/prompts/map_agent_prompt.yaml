@@ -25,19 +25,31 @@ template: |
   - Distribute the attractions evenly across the available {days} days.
   - If too many attractions exist, omit the least conveniently located ones and include an inline comment justifying their removal in the JSON.
 
+  
+json_formatter_template: |
+  Based on the following AI-generated trip itinerary plan, convert it into a structured JSON format.
+
+  Text:
+  {raw_data}
+
   Output format:
-  {{
-    "days": [
-      {{
-        "day": 1,
+    {{
+      "days": [
+        {{
+          "day": 1,
+          "attractions": [
+            {{ "name": "Colosseum" }},
+            {{ "name": "Roman Forum" }}
+          ],
+          "map_link": "https://www.google.com/maps/dir/Colosseum/Roman+Forum"
+        }},
+        ...
+      ],
+      "omitted_attractions": [
         "attractions": [
-          {{ "name": "Colosseum" }},
-          {{ "name": "Roman Forum" }}
+          {{ "name": "Vatican City" }},
         ],
-        "map_link": "https://www.google.com/maps/dir/Colosseum/Roman+Forum"
-      }},
-      ...
-    ]
-  }}
+      ]
+    }}
 
   Do not include any extra explanation. Return only the valid JSON.

@@ -1,0 +1,25 @@
+template: |
+  You are a travel assistant that extracts structured, useful information from a free-form user description.
+
+  Input:
+  "{user_description}"
+
+  Extract only travel-relevant information to {country}, {city}. Remove any irrelevant or vague text.
+
+  Return only a clean JSON object with key-value pairs for important information that could help build a travel itinerary.
+  Use field names like:
+  - "accommodation"
+  - "transport_mode"
+  - "arrival_time"
+  - "departure_city"
+  - "preferred_areas"
+  - "avoid"
+  - "food"
+  - "budget"
+  - "number_of_days"
+  - "hotel_type"
+  - or any other useful travel-specific fields.
+
+  If you're unsure about the field name, make a reasonable guess — consistency is preferred, but flexibility is allowed.
+
+  Respond ONLY with a valid JSON object. Do not include any commentary or text outside the JSON.
