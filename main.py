@@ -1,16 +1,12 @@
-import streamlit as st
 import json
-import pandas as pd
-from datetime import datetime, date, timedelta
-from typing import Dict, List, Optional, Any
-import plotly.express as px
-import plotly.graph_objects as go
-import logging
+from typing import Dict
+from datetime import date, timedelta
 import folium
+import streamlit as st
 from streamlit_folium import st_folium
 
-from backend.agents.utils.hotel_filter import HotelFilter
 from backend.graph import Graph
+from backend.agents.utils.hotel_filter import HotelFilter
 from frontend.models.travel_request import TravelRequest
 from frontend.views.attractions import display_attractions
 from frontend.views.hotels import display_hotels
