@@ -1,5 +1,7 @@
 from typing import Dict
 from datetime import date, timedelta
+import folium
+from streamlit_folium import st_folium
 import streamlit as st
 
 from frontend.models.travel_request import TravelRequest
