@@ -10,13 +10,13 @@ from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
-from agents.utils.json_formatter import GenericLLMFormatter
+from backend.agents.utils.json_formatter import GenericLLMFormatter
 
 
 class HotelAgent:
     def __init__(self, config):
         self.config = config
-        self._load_prompts("prompts/booking_agent_prompt.yaml")
+        self._load_prompts("backend/prompts/booking_agent_prompt.yaml")
         self._setup_llm()
         self._setup_tools()
         self._setup_agent()

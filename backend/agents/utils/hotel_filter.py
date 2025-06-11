@@ -1,6 +1,6 @@
 import requests as r
 from typing import Dict, Any, List
-from settings.config import config
+from backend.settings.config import config
 
 
 class HotelFilter:

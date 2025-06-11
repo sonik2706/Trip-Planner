@@ -10,14 +10,14 @@ from typing import Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
-from agents.utils.json_formatter import GenericLLMFormatter
-from agents.utils.prompt import load_prompts
+from backend.agents.utils.json_formatter import GenericLLMFormatter
+from backend.agents.utils.prompt import load_prompts
 
 class AttractionAgent:
 
     def __init__(self, config):
         self.config = config
-        self.prompts = load_prompts("prompts/attraction_agent_prompt.yaml")
+        self.prompts = load_prompts("backend/prompts/attraction_agent_prompt.yaml")
         self._setup_llm()
         self._setup_tools()
         self._setup_agent()

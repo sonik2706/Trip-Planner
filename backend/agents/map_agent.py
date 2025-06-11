@@ -9,16 +9,16 @@ import requests as r
 from typing import Dict, List, Literal
 from urllib.parse import quote_plus
 
-from agents.utils.prompt import load_prompts
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate, load_prompt
-from agents.utils.json_formatter import GenericLLMFormatter
+from backend.agents.utils.prompt import load_prompts
+from backend.agents.utils.json_formatter import GenericLLMFormatter
 
 class MapAgent:
     def __init__(self, config, model_temperature: float = 0.0):
         self.config = config
-        self.prompts = load_prompts("prompts/map_agent_prompt.yaml")
+        self.prompts = load_prompts("backend/prompts/map_agent_prompt.yaml")
         self._setup_llm(model_temperature)
         self._setup_tools()
         self._setup_agent()

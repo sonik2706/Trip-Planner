@@ -9,8 +9,8 @@ import logging
 import folium
 from streamlit_folium import st_folium
 
-from agents.utils.hotel_filter import HotelFilter
-from app.graph import Graph
+from backend.agents.utils.hotel_filter import HotelFilter
+from backend.graph import Graph
 
 
 from dataclasses import dataclass

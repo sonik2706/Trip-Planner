@@ -5,9 +5,9 @@ import requests as r
 from urllib.parse import quote_plus
 from typing import List, Dict
 
-from agents.utils import location_normalizer
-from agents.utils.location_normalizer import LocationNormalizer
-from settings.config import config
+from backend.agents.utils import location_normalizer
+from backend.agents.utils.location_normalizer import LocationNormalizer
+from backend.settings.config import config
 
 
 class LocationGeocoder:

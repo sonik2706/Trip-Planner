@@ -7,13 +7,13 @@ from datetime import datetime
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
 
-from agents.utils.LocationGeocoder import LocationGeocoder
-from agents.prompt_agent import PromptAgent
-from agents.attraction_agent import AttractionAgent
-from agents.hotel_agent import HotelAgent
-from agents.map_agent import MapAgent
+from backend.agents.utils.LocationGeocoder import LocationGeocoder
+from backend.agents.prompt_agent import PromptAgent
+from backend.agents.attraction_agent import AttractionAgent
+from backend.agents.hotel_agent import HotelAgent
+from backend.agents.map_agent import MapAgent
 
-from settings.config import Config
+from backend.settings.config import Config
 
 
 class State(TypedDict, total=False):

@@ -10,12 +10,12 @@ from langchain.chains import LLMChain
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
-from agents.utils.prompt import load_prompts
+from backend.agents.utils.prompt import load_prompts
 
 class PromptAgent:
     def __init__(self, config):
         self.config = config
-        self.prompts = load_prompts("prompts/prompt_agent_prompt.yaml")
+        self.prompts = load_prompts("backend/prompts/prompt_agent_prompt.yaml")
         self._setup_tools()
         self._setup_llm()
 
