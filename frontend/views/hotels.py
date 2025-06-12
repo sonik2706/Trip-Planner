@@ -8,6 +8,9 @@ def is_hotel_in_budget(hotel: Dict, travel_request: TravelRequest) -> bool:
     """Check if hotel is within budget"""
     price = hotel.get("price", 0)
 
+    if price is None:
+        return False  # lub False, w zależności od logiki
+
     if travel_request.min_price and price < travel_request.min_price:
         return False
     if travel_request.max_price and price > travel_request.max_price:
