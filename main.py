@@ -82,11 +82,18 @@ def display_hotel_selection():
         
         for idx, hotel in enumerate(hotels):
             with st.container():
-                # Display hotel card
-                display_hotel_card(hotel, st.session_state.travel_request)
+                # Display hotel card with error handling
+                try:
+                    display_hotel_card(hotel, st.session_state.travel_request)
+                except Exception as card_error:
+                    st.error(f"Error displaying hotel {idx + 1}: {card_error}")
+                    # Show basic hotel info as fallback
+                    st.write(f"**Hotel {idx + 1}**: {hotel.get('name', 'Unknown')}")
+                    if 'price' in hotel:
+                        st.write(f"Price: {hotel['price']}")
                 
                 # Add select button directly under each hotel card
-                if st.button(f"Select This Hotel", key=f"select_hotel_{idx}", type="primary", use_container_width=True): 
+                if st.button(f"Select Hotel {idx + 1}", key=f"select_hotel_{idx}", type="primary", use_container_width=True): 
                     selected_hotel_idx = idx
                 
                 st.markdown("---")  # Add separator between hotels
@@ -108,16 +115,19 @@ def display_hotel_selection():
                     # we'll manually run the remaining nodes
                     try:
                         # Run wait_for_hotel_selection node manually
-                        continued_state = app_continue._wait_for_hotel_selection(continued_state)
+                        after_hotel_selection = app_continue._wait_for_hotel_selection(continued_state)
+                        
                         status_text = st.empty()
                         status_text.text("🗓️ Building itinerary...")
                         
                         # Run build_itinerary node manually  
-                        final_state = app_continue._build_itinerary(continued_state)
+                        final_state = app_continue._build_itinerary(after_hotel_selection)
+                        
                         status_text.text("✅ Itinerary complete!")
                         
                     except Exception as manual_error:
                         st.error(f"Manual execution failed: {manual_error}")
+                        
                         # Last resort - try full re-run with selected hotel in initial state
                         initial_with_hotel = {
                             "country": st.session_state.travel_request.country,
@@ -134,7 +144,29 @@ def display_hotel_selection():
                         final_state = simple_graph.invoke(initial_with_hotel)
                     
                     # Format results for frontend
-                    formatted_results = format_graph_results(final_state, st.session_state.travel_request)
+                    try:
+                        formatted_results = format_graph_results(final_state, st.session_state.travel_request)
+                        
+                        # Check if format_graph_results actually failed internally
+                        if isinstance(formatted_results, dict) and formatted_results.get("status") != "success":
+                            raise Exception(f"format_graph_results failed: {formatted_results.get('error_message')}")
+                        
+                    except Exception as format_error:
+                        st.error(f"ERROR in format_graph_results: {format_error}")
+                        
+                        # Create a manual formatted result to bypass the error
+                        formatted_results = {
+                            "status": "success",
+                            "attractions": final_state.get("attractions", {}).get("attractions", []),
+                            "hotels": [final_state.get("selected_hotel", {})],
+                            "itinerary": final_state.get("itinerary", {}),
+                            "request": {
+                                "city": final_state.get("city", ""),
+                                "country": final_state.get("country", ""),
+                                "focus": final_state.get("focus", "")
+                            }
+                        }
+                        st.warning("Used fallback formatting due to error in format_graph_results")
                     
                     # Save final results and move to results stage
                     st.session_state.travel_results = formatted_results
@@ -241,9 +273,6 @@ def main():
                     try:
                         # Don't use thread_id config since graph doesn't have checkpointer
                         for event in app.graph.stream(initial_state):
-                            # Debug: print event structure (remove after testing)
-                            st.write(f"Debug - Event type: {type(event)}, Event: {event}")
-                            
                             # Handle different event formats
                             if isinstance(event, dict):
                                 # event is a dictionary containing node updates
@@ -267,8 +296,7 @@ def main():
                                     break
                                     
                             else:
-                                # Try to handle other formats
-                                st.warning(f"Unexpected event format: {type(event)} - {event}")
+                                # Unexpected format - continue processing
                                 continue
                             
                             # Break if we found hotels
@@ -315,8 +343,6 @@ def main():
                         st.rerun()
                     else:
                         st.error("❌ No hotels found in the graph execution. Please check your criteria.")
-                        if current_state:
-                            st.write("Current state keys:", list(current_state.keys()) if isinstance(current_state, dict) else "Not a dict")
                         
                 except Exception as e:
                     st.error(f"❌ Planning failed: {str(e)}")
@@ -398,12 +424,17 @@ def main():
 
                 # Show request details for debugging
                 with st.expander("🔍 Request Details (for debugging)"):
-                    st.json(results.get("request", {}))
+                    st.write("**Error Message:**")
+                    st.write(error_msg)
+                    st.write("**Full Results:**") 
+                    st.json(results)
 
                 # Retry button
                 if st.button("🔄 Try Again"):
                     reset_session_state()
                     st.rerun()
+        else:
+            st.warning("No travel results available")
         
         # Add plan new trip button
         if st.sidebar.button("🆕 Plan New Trip", use_container_width=True):
