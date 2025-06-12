@@ -34,6 +34,25 @@ def initialize_session_state():
     if "travel_request" not in st.session_state:
         st.session_state.travel_request = None
 
+def handle_node_update(node_name, node_output, status_text, progress_bar):
+    """Handle individual node updates during graph execution"""
+    if node_name == "verify_prompt":
+        status_text.text("🎯 Finding attractions...")
+        progress_bar.progress(10)
+        return node_output
+        
+    elif node_name == "search_for_attractions":
+        status_text.text("🏨 Finding hotels...")
+        progress_bar.progress(25)
+        return node_output
+        
+    elif node_name == "find_hotels":
+        status_text.text("⏳ Hotels found, waiting for selection...")
+        progress_bar.progress(50)
+        return node_output
+    
+    return node_output
+
 def display_hotel_selection():
     """Display hotel selection interface"""
     st.markdown(
@@ -59,13 +78,18 @@ def display_hotel_selection():
         st.write(f"Found **{len(hotels)}** hotels matching your criteria:")
         
         # Create hotel selection cards
-        cols = st.columns(min(3, len(hotels)))
         selected_hotel_idx = None
         
         for idx, hotel in enumerate(hotels):
-            display_hotel_card(hotel, st.session_state.travel_request)
-            if st.button(f"Select This Hotel", key=f"select_hotel_{idx}", type="primary"): 
-                selected_hotel_idx = idx
+            with st.container():
+                # Display hotel card
+                display_hotel_card(hotel, st.session_state.travel_request)
+                
+                # Add select button directly under each hotel card
+                if st.button(f"Select This Hotel", key=f"select_hotel_{idx}", type="primary", use_container_width=True): 
+                    selected_hotel_idx = idx
+                
+                st.markdown("---")  # Add separator between hotels
         
         # Process hotel selection
         if selected_hotel_idx is not None:
@@ -73,18 +97,44 @@ def display_hotel_selection():
             
             with st.spinner("🏨 Continuing with selected hotel..."):
                 try:
-                    # Update state with selected hotel
-                    updated_state = st.session_state.graph_state.copy()
-                    updated_state["selected_hotel"] = selected_hotel
+                    # Create new state with selected hotel
+                    continued_state = st.session_state.graph_state.copy()
+                    continued_state["selected_hotel"] = selected_hotel
                     
-                    # Resume graph execution
-                    final_result = st.session_state.compiled_graph.invoke(
-                        updated_state,
-                        config={"configurable": {"thread_id": "user_session"}}
-                    )
+                    # Create a new graph instance for the remaining steps
+                    app_continue = Graph()
+                    
+                    # Since we can't resume from interrupt without checkpointer,
+                    # we'll manually run the remaining nodes
+                    try:
+                        # Run wait_for_hotel_selection node manually
+                        continued_state = app_continue._wait_for_hotel_selection(continued_state)
+                        status_text = st.empty()
+                        status_text.text("🗓️ Building itinerary...")
+                        
+                        # Run build_itinerary node manually  
+                        final_state = app_continue._build_itinerary(continued_state)
+                        status_text.text("✅ Itinerary complete!")
+                        
+                    except Exception as manual_error:
+                        st.error(f"Manual execution failed: {manual_error}")
+                        # Last resort - try full re-run with selected hotel in initial state
+                        initial_with_hotel = {
+                            "country": st.session_state.travel_request.country,
+                            "city": st.session_state.travel_request.city, 
+                            "context": "",
+                            "num_attractions": st.session_state.travel_request.num_attractions,
+                            "hotel_params": continued_state["hotel_params"],
+                            "focus": st.session_state.travel_request.attraction_focus,
+                            "selected_hotel": selected_hotel
+                        }
+                        
+                        # Use simple graph without interrupts
+                        simple_graph = app_continue._raw_graph.compile()
+                        final_state = simple_graph.invoke(initial_with_hotel)
                     
                     # Format results for frontend
-                    formatted_results = format_graph_results(final_result, st.session_state.travel_request)
+                    formatted_results = format_graph_results(final_state, st.session_state.travel_request)
                     
                     # Save final results and move to results stage
                     st.session_state.travel_results = formatted_results
@@ -174,6 +224,7 @@ def main():
                     progress_bar = st.progress(0)
                     status_text = st.empty()
                     status_text.text("Verifying prompt...")
+                    
                     initial_state = {
                         "country": hotel_params["country"],
                         "city": hotel_params["city"],
@@ -182,42 +233,91 @@ def main():
                         "hotel_params": hotel_params,
                         "focus": travel_request.attraction_focus
                     }
-                    for mode, step in app.graph.stream(initial_state, stream_mode=['updates']):
-                        if "verify_prompt" in step.keys():
-                            status_text.text("🎯 Finding attractions...")
-                            progress_bar.progress(10)
-
-                        if "search_for_attractions" in step.keys():
-                            status_text.text("🏨 Finding hotels...")
-                            progress_bar.progress(25)
-
-                        elif "find_hotels" in step.keys():
-                            status_text.text("waiting...")
-                            progress_bar.progress(50)
-
-                            # Save graph state and break
-                            last_checkpoint = step.checkpoint
-                            partial_state = step.state
-                            break
+                    
+                    # Stream through the graph execution until we find hotels
+                    current_state = None
+                    hotels_found = False
+                    
+                    try:
+                        # Don't use thread_id config since graph doesn't have checkpointer
+                        for event in app.graph.stream(initial_state):
+                            # Debug: print event structure (remove after testing)
+                            st.write(f"Debug - Event type: {type(event)}, Event: {event}")
+                            
+                            # Handle different event formats
+                            if isinstance(event, dict):
+                                # event is a dictionary containing node updates
+                                for node_name, node_output in event.items():
+                                    current_state = handle_node_update(node_name, node_output, status_text, progress_bar)
+                                    
+                                    # Stop after hotels are found (before the interrupt node)
+                                    if node_name == "find_hotels" and "hotels" in node_output:
+                                        hotels_found = True
+                                        current_state = node_output
+                                        break
+                                        
+                            elif isinstance(event, tuple) and len(event) == 2:
+                                # event is a tuple (node_name, node_output)
+                                node_name, node_output = event
+                                current_state = handle_node_update(node_name, node_output, status_text, progress_bar)
+                                
+                                if node_name == "find_hotels" and isinstance(node_output, dict) and "hotels" in node_output:
+                                    hotels_found = True
+                                    current_state = node_output
+                                    break
+                                    
+                            else:
+                                # Try to handle other formats
+                                st.warning(f"Unexpected event format: {type(event)} - {event}")
+                                continue
+                            
+                            # Break if we found hotels
+                            if hotels_found:
+                                break
+                                
+                    except Exception as stream_error:
+                        st.error(f"Error during streaming: {stream_error}")
+                        st.write(f"Stream error details: {type(stream_error)}")
+                        
+                        # Try a different approach - run the graph step by step manually
+                        try:
+                            # Create a simple version without interrupts
+                            app_simple = Graph()
+                            # Get the raw graph without compilation
+                            simple_graph = app_simple._raw_graph.compile()  # Compile without interrupt
+                            
+                            # Run until we get hotels
+                            current_state = simple_graph.invoke(initial_state)
+                            if "hotels" in current_state:
+                                hotels_found = True
+                            
+                        except Exception as fallback_error:
+                            st.error(f"Fallback also failed: {fallback_error}")
+                            return
 
                     progress_bar.progress(75)
                     status_text.text("⏳ Waiting for hotel selection...")
 
-                    # Save the interrupted state
-                    st.session_state.graph_state = state
-                    st.session_state.compiled_graph = app.graph
-                    st.session_state.planning_stage = "hotel_selection"
+                    # Save the current state for hotel selection
+                    if hotels_found and current_state and isinstance(current_state, dict) and "hotels" in current_state:
+                        st.session_state.graph_state = current_state
+                        st.session_state.compiled_graph = app.graph
+                        st.session_state.planning_stage = "hotel_selection"
 
-                    progress_bar.progress(100)
-                    status_text.text("✅ Ready for hotel selection!")
+                        progress_bar.progress(100)
+                        status_text.text("✅ Ready for hotel selection!")
 
-                    # Clear progress indicators
-                    progress_bar.empty()
-                    status_text.empty()
+                        # Clear progress indicators
+                        progress_bar.empty()
+                        status_text.empty()
 
-                    st.success("🏨 Hotels found! Please select your preferred hotel.")
-                    st.rerun()
-
+                        st.success("🏨 Hotels found! Please select your preferred hotel.")
+                        st.rerun()
+                    else:
+                        st.error("❌ No hotels found in the graph execution. Please check your criteria.")
+                        if current_state:
+                            st.write("Current state keys:", list(current_state.keys()) if isinstance(current_state, dict) else "Not a dict")
+                        
                 except Exception as e:
                     st.error(f"❌ Planning failed: {str(e)}")
                     if st.checkbox("Show error details"):

@@ -13,6 +13,9 @@ search_template: |
   YOUR MISSION:
   Find the best hotels that balance location convenience, quality, and value. Even if perfect matches within budget aren't available, provide intelligent alternatives and explain why they're worth considering.
   IF DON'T HAVE ENOUGH HOTELS TO GIVE DIFFERENT RECOMENADTIONS BECAUSE OF RATING, STARS, TOO EXPENSIVE OR BELOW PRICE RANGE ETC. TRY SENDING ANOTHER REQUEST WITH NEXT page_number UNTIL YOU GET SOLID RESULTS
+
+  VERY IMPORTANT: !!!!!!!!!!!!!!
+  Try adjusting page_number before anything else!!!
   
   CALL search_and_rank_hotels with this JSON:
   IMPORTANT: Call search_and_rank_hotels with clean JSON (no escape characters)
