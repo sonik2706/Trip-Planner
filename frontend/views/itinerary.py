@@ -18,7 +18,10 @@ def display_itinerary(itinerary_dict: Dict):
         st.markdown("### ⚠️ Omitted Attractions")
         st.info("These were skipped due to time or distance constraints:")
         for attr in itinerary_dict["omitted_attractions"]:
-            st.markdown(f"- {attr['name']}")
+            try:
+                st.markdown(f"- {attr['name']}")
+            except:
+                st.write(attr)
             
     with st.expander("📦 Show Raw JSON"):
         st.json(itinerary_dict)

@@ -17,7 +17,7 @@ template: |
   - Cluster attractions geographically based on coordinate proximity.
   - For each day, create a route that starts at the accommodation and proceeds to the closest next attraction, continuing forward without backtracking.
   - Minimize the total travel distance for each day using spatial reasoning.
-  - Generate a Google Maps route link using the `generate_google_maps_link` tool for each day's ordered attractions.
+  - Generate a Google Maps route link using the `generate_google_maps_link` tool for each day's ordered attractions. Please add to each attraction city name after a space WITHOUT comma (Wawel Castle Krakow).
   - Return the result in valid JSON format using the structure below.
 
   Guidelines:

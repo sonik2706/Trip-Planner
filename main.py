@@ -38,17 +38,17 @@ def handle_node_update(node_name, node_output, status_text, progress_bar):
     """Handle individual node updates during graph execution"""
     if node_name == "verify_prompt":
         status_text.text("🎯 Finding attractions...")
-        progress_bar.progress(10)
+        progress_bar.progress(25)
         return node_output
         
     elif node_name == "search_for_attractions":
         status_text.text("🏨 Finding hotels...")
-        progress_bar.progress(25)
+        progress_bar.progress(50)
         return node_output
         
     elif node_name == "find_hotels":
         status_text.text("⏳ Hotels found, waiting for selection...")
-        progress_bar.progress(50)
+        progress_bar.progress(75)
         return node_output
     
     return node_output
