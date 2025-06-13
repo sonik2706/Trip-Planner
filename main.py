@@ -16,6 +16,7 @@ from frontend.views.home import display_home_screen, create_sidebar_filters
 from frontend.views.attractions import display_attractions
 from frontend.views.hotels import display_hotels, display_hotel_card
 from frontend.views.itinerary import display_itinerary
+from frontend.views.export import create_export_options
 from frontend.models.travel_request import TravelRequest
 from frontend.utils import load_css, format_graph_results
 
@@ -376,9 +377,8 @@ def main():
                 st.balloons()  # Celebratory animation
 
                 # Create main tabs for results
-                tab1, tab2, tab3, tab4, tab5 = st.tabs(
+                tab1, tab2, tab3, tab4 = st.tabs(
                     [
-                        "📋 Dashboard",
                         "🎯 Attractions",
                         "🏨 Hotels",
                         "🗓️ Itinerary",
@@ -387,29 +387,25 @@ def main():
                 )
 
                 with tab1:
-                    # display_summary_dashboard(results, travel_request)
-                    pass
-
-                with tab2:
                     if results.get("attractions"):
                         display_attractions(results["attractions"])
                     else:
                         st.warning("No attraction data available")
 
-                with tab3:
+                with tab2:
                     if results.get("hotels"):
                         display_hotels(results["hotels"], st.session_state.travel_request.currency, st.session_state.travel_request)
                     else:
                         st.warning("No hotel data available")
 
-                with tab4:
+                with tab3:
                     if results.get("itinerary"):
                         display_itinerary(results["itinerary"])
                     else:
                         st.warning("No itinerary data available")
 
-                with tab5:
-                    # create_export_options(results, travel_request)
+                with tab4:
+                    create_export_options(results, travel_request)
                     pass
 
             else:

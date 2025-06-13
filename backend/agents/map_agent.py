@@ -27,19 +27,29 @@ class MapAgent:
 
     def _get_coordinates_from_string(self, locations_str: str) -> str:
         """
-        Wrapper method to convert string input to dict format for get_attraction_coordinates
+        Parses input like: "city=Rome; attractions=Colosseum, Pantheon, Trevi Fountain"
+        Then gets coordinates using location_geocoder
         """
-        locations = [loc.strip() for loc in locations_str.split(",")]
-        
-        # Convert to expected dict format
-        data = {
-            "city": "Unknown",  # You might want to extract city from context
-            "attractions": [{"name": loc} for loc in locations]
-        }
-        
         try:
+            # Rozdziel na części
+            parts = [part.strip() for part in locations_str.split(";")]
+            city = "Unknown"
+            attractions = []
+
+            for part in parts:
+                if part.startswith("city="):
+                    city = part[len("city="):].strip()
+                elif part.startswith("attractions="):
+                    attractions = [a.strip() for a in part[len("attractions="):].split(",")]
+
+            # Tworzenie struktury danych
+            data = {
+                "city": city,
+                "attractions": [{"name": name} for name in attractions]
+            }
+
+            # Wywołanie metody i formatowanie wyników
             results = self.location_geocoder.get_attraction_coordinates(data)
-            # Convert back to string format
             formatted_results = []
             for result in results:
                 name = result.get("name", "Unknown")
@@ -49,8 +59,10 @@ class MapAgent:
                 else:
                     formatted_results.append(f"{name}: No coordinates found")
             return "\n".join(formatted_results)
+
         except Exception as e:
             return f"Error getting coordinates: {str(e)}"
+
 
     def _setup_tools(self):
         self.tools = [
@@ -66,8 +78,9 @@ class MapAgent:
                 name="get_coordinates",
                 func=self._get_coordinates_from_string,  # Use wrapper instead
                 description=(
-                    "Get the coordinates (latitude and longitude) for multiple locations. "
-                    "Input should be a comma-separated list of location names or addresses (e.g., 'Colosseum, Rome, Pantheon, Rome'). "
+                    "Get the coordinates (latitude and longitude) for multiple attractions in a specific city. "
+                    "Input should be in the format: 'city=CityName; attractions=Attraction1, Attraction2, Attraction3'. "
+                    "Example: 'city=Rome; attractions=Colosseum, Pantheon, Trevi Fountain'. "
                     "Returns a list of results like: 'Colosseum: 41.89, 12.49'."
                 ),
             ),

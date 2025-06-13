@@ -32,7 +32,7 @@ json_formatter_template: |
   Text:
   {raw_data}
 
-  Output must be a valid JSON with the following format:
+  Output must be a valid JSON with the following format ALWAYS STRUCTURE JSON TAHT WAY YOU CANNOT MODIFY THAT IN ANY WAY!!!!!:
     {{
       "days": [
         {{
