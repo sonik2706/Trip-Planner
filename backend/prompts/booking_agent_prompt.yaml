@@ -12,6 +12,10 @@ search_template: |
   
   YOUR MISSION:
   Find the best hotels that balance location convenience, quality, and value. Even if perfect matches within budget aren't available, provide intelligent alternatives and explain why they're worth considering.
+  IF DON'T HAVE ENOUGH HOTELS TO GIVE DIFFERENT RECOMENADTIONS BECAUSE OF RATING, STARS, TOO EXPENSIVE OR BELOW PRICE RANGE ETC. TRY SENDING ANOTHER REQUEST WITH NEXT page_number UNTIL YOU GET SOLID RESULTS
+
+  VERY IMPORTANT: !!!!!!!!!!!!!!
+  Try adjusting page_number before anything else!!!
   
   CALL search_and_rank_hotels with this JSON:
   IMPORTANT: Call search_and_rank_hotels with clean JSON (no escape characters)
@@ -28,7 +32,8 @@ search_template: |
     "star_classes": {star_classes},
     "min_review_score": {min_review_score},
     "max_hotels": {max_hotels},
-    "attractions": {attractions}
+    "attractions": {attractions},
+    "page_number": {page_number}
   }}
   
   AFTER GETTING RESULTS, provide intelligent analysis:
@@ -137,30 +142,24 @@ hotel_json_formatter_template: |
   Output should be a valid JSON with the following format:
   {{
     "city": "{city}",
-    "categories": [
+    "hotels": [
       {{
-        "name": "Best Value",
-        "hotels": [
+        "category_name": "Best Value",
+        "name": "Hotel Name",
+        "price": 0.0,
+        "currency": 0.0,
+        "stars": 0,
+        "review_score": 0.0,
+        "review_count": 0,
+        "average_distance_km": 0.0,
+        "value_score": 0.0,
+        "link": "https://...",
+        "why_recommended": "Short explanation",
+        "coordinates": [
           {{
-            "name": "Hotel Name",
-            "price": 0.0,
-            "currency": 0.0,
-            "stars": 0,
-            "review_score": 0.0,
-            "review_count": 0,
-            "average_distance_km": 0.0,
-            "value_score": 0.0,
-            "link": "https://...",
-            "why_recommended": "Short explanation",
-            "coordinates": [
-              {{
-                "lat": 0.0,
-                "lon": 0.0
-              }}
-            ]
-          }},
-          ...
-        ]
+            "lat": 0.0,
+            "lon": 0.0
+          }}
       }},
       ...
     ],

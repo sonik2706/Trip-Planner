@@ -14,14 +14,55 @@ from langchain.agents import Tool, initialize_agent, AgentType
 from langchain.prompts import PromptTemplate, load_prompt
 from backend.agents.utils.prompt import load_prompts
 from backend.agents.utils.json_formatter import GenericLLMFormatter
+from backend.agents.utils.LocationGeocoder import LocationGeocoder
 
 class MapAgent:
     def __init__(self, config, model_temperature: float = 0.0):
         self.config = config
         self.prompts = load_prompts("backend/prompts/map_agent_prompt.yaml")
         self._setup_llm(model_temperature)
+        self.location_geocoder = LocationGeocoder()
         self._setup_tools()
         self._setup_agent()
+
+    def _get_coordinates_from_string(self, locations_str: str) -> str:
+        """
+        Parses input like: "city=Rome; attractions=Colosseum, Pantheon, Trevi Fountain"
+        Then gets coordinates using location_geocoder
+        """
+        try:
+            # Rozdziel na części
+            parts = [part.strip() for part in locations_str.split(";")]
+            city = "Unknown"
+            attractions = []
+
+            for part in parts:
+                if part.startswith("city="):
+                    city = part[len("city="):].strip()
+                elif part.startswith("attractions="):
+                    attractions = [a.strip() for a in part[len("attractions="):].split(",")]
+
+            # Tworzenie struktury danych
+            data = {
+                "city": city,
+                "attractions": [{"name": name} for name in attractions]
+            }
+
+            # Wywołanie metody i formatowanie wyników
+            results = self.location_geocoder.get_attraction_coordinates(data)
+            formatted_results = []
+            for result in results:
+                name = result.get("name", "Unknown")
+                coords = result.get("coords", [])
+                if len(coords) >= 2:
+                    formatted_results.append(f"{name}: {coords[0]}, {coords[1]}")
+                else:
+                    formatted_results.append(f"{name}: No coordinates found")
+            return "\n".join(formatted_results)
+
+        except Exception as e:
+            return f"Error getting coordinates: {str(e)}"
+
 
     def _setup_tools(self):
         self.tools = [
@@ -35,10 +76,11 @@ class MapAgent:
             ),
             Tool(
                 name="get_coordinates",
-                func=self.get_all_coordinates,
+                func=self._get_coordinates_from_string,  # Use wrapper instead
                 description=(
-                    "Get the coordinates (latitude and longitude) for multiple locations. "
-                    "Input should be a comma-separated list of location names or addresses (e.g., 'Colosseum, Rome, Pantheon, Rome'). "
+                    "Get the coordinates (latitude and longitude) for multiple attractions in a specific city. "
+                    "Input should be in the format: 'city=CityName; attractions=Attraction1, Attraction2, Attraction3'. "
+                    "Example: 'city=Rome; attractions=Colosseum, Pantheon, Trevi Fountain'. "
                     "Returns a list of results like: 'Colosseum: 41.89, 12.49'."
                 ),
             ),
@@ -128,50 +170,6 @@ class MapAgent:
         except Exception as e:
             return f"Error finding ETA between {origin} and {destination}: {str(e)}"
 
-    def get_coordinates(self, location: str) -> str:
-        """
-        Get the geographic coordinates (latitude and longitude) of a location using Google Maps Geocoding API.
-
-        Args:
-            location (str): The name or address of the location (e.g., "Colosseum, Rome").
-
-        Returns:
-            str: A formatted string with latitude and longitude, or an error message.
-        """
-        try:
-            encoded_location = quote_plus(location)
-            url = (
-                f"https://maps.googleapis.com/maps/api/geocode/json"
-                f"?address={encoded_location}&key={self.config.DISTANCE_MATRIX_API_KEY}"
-            )
-
-            response = r.get(url)
-            data = response.json()
-
-            if data["status"] != "OK":
-                return f"Could not get coordinates for {location}."
-
-            result = data["results"][0]["geometry"]["location"]
-            lat = result["lat"]
-            lng = result["lng"]
-
-            return f"{location} -> Latitude: {lat}, Longitude: {lng}"
-        except Exception as e:
-            return f"Error finding coordinates for {location}: {str(e)}"
-
-    def get_all_coordinates(self, locations_str: str) -> str:
-        """
-        Accepts a comma-separated list of location names and returns their coordinates.
-        """
-        locations = [loc.strip() for loc in locations_str.split(",")]
-        results = []
-        for loc in locations:
-            try:
-                coords = self.get_coordinates(loc)
-                results.append(f"{loc}: {coords}")
-            except Exception as e:
-                results.append(f"{loc}: ERROR - {str(e)}")
-        return "\n".join(results)
 
     def generate_google_maps_link(self, attractions_str: str) -> str:
         """
@@ -195,8 +193,7 @@ class MapAgent:
         # Ensure each attraction is converted to a string before applying quote_plus
         return (
             base_url
-            + "/".join(quote_plus(str(attraction)) for attraction in attractions)
-            + f"&travelmode=transit"
+            + "/".join(quote_plus(str(attraction)) for attraction in attractions) + "/"
         )
 
     def optimize(

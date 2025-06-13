@@ -14,7 +14,7 @@ class LocationNormalizer:
             template=(
                 "Given a list of location names, return a valid JSON object where each key is the original name "
                 "and each value is the most concise, accurate local name that would work best for OpenStreetMap search.\n\n"
-                "Avoid generic words like 'bazaar', 'fountain', and translations. Do not include the city name. "
+                "Avoid generic words like 'bazaar', 'fountain', and translations. GIVE THE NAME IN ORIGINAL LANGUAGE IF POSSIBLE. Do not include the city name. "
                 "Focus on names that OpenStreetMap would likely recognize.\n\n"
                 "Examples:\n"
                 "- 'Sarajevo City Hall (Vijećnica)' → 'Vijećnica'\n"

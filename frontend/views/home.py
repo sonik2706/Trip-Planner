@@ -102,7 +102,7 @@ def create_sidebar_filters():
         rooms = st.number_input("Rooms", 1, 5, 1)
 
     # Budget
-    currency = st.sidebar.selectbox("Currency", ["USD", "EUR", "PLN", "GBP", "CAD"])
+    currency = st.sidebar.selectbox("Currency", ["PLN", "EUR", "USD", "GBP", "CAD"])
 
     budget_option = st.sidebar.radio(
         "Budget Type", ["Set Range", "Maximum Only", "No Limit"]
@@ -110,7 +110,7 @@ def create_sidebar_filters():
 
     min_price, max_price = None, None
     if budget_option == "Set Range":
-        price_range = st.sidebar.slider("Price Range per night", 0, 1000, (100, 300))
+        price_range = st.sidebar.slider("Price Range per night", 0, 2000, (300, 800))
         min_price, max_price = price_range
     elif budget_option == "Maximum Only":
         max_price = st.sidebar.number_input("Maximum price per night", 0, 2000, 200)
