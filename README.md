@@ -124,21 +124,51 @@ BOOKING_API_HOST=booking-com.p.rapidapi.com
 ### Project Structure
 
 ```
-travel-planning-app/
+trip-planner/
 ├── backend/
 │   ├── agents/           # AI agent implementations
+│   │   ├── utils/        # Shared utilities
+│   │   │   ├── hotel_filter.py
+│   │   │   ├── json_formatter.py
+│   │   │   ├── location_normalizer.py
+│   │   │   ├── LocationGeocoder.py
+│   │   │   ├── prompt.py
 │   │   ├── attraction_agent.py
 │   │   ├── booking_agent.py
+│   │   ├── hotel_agent.py
 │   │   ├── map_agent.py
-│   │   └── utils/        # Shared utilities
+│   │   └── prompt_agent.py
 │   ├── prompts/          # AI prompt templates
-│   └── graph.py          # Main workflow orchestration
+│   │   ├── attraction_agent_prompt.yaml
+│   │   ├── booking_agent_prompt.yaml
+│   │   ├── map_agent_prompt.yaml
+│   │   └── prompt_agent_prompt.yaml
+│   ├── settings/
+│   │   ├── config.py
+│   │   └── graph.py      # Main workflow orchestration
 ├── frontend/
-│   └── streamlit_app/    # Streamlit UI components
-├── main.py              # Application entry point
-├── requirements.txt     # Python dependencies
-├── Dockerfile          # Container configuration
-└── docker-compose.yaml # Multi-container setup
+│   └── assets/           # Static assets
+│   │   └── styles.css    # CSS styles
+│   └── models/           # Data models
+│   │   └── travel_request.py
+│   └── views/            # UI components
+│   │   ├── attractions.py
+│   │   ├── dashboard.py
+│   │   ├── export.py
+│   │   ├── home.py
+│   │   ├── hotels.py
+│   │   ├── itinerary.py
+│   │   └── utils.py
+├── .dockerignore         # Docker ignore file
+├── .env                  # Environment variables
+├── .gitignore            # Git ignore file
+├── docker-compose.yaml   # Multi-container setup
+├── Dockerfile            # Container configuration
+├── graph.png             # Application graph
+├── LICENSE               # Project license
+├── main.py               # Application entry point
+├── README.md             # Project documentation
+└── requirements.txt      # Python dependencies
 ```
 
 ### Key Components
