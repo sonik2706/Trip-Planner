@@ -164,7 +164,6 @@ trip-planner/
 ├── .gitignore            # Git ignore file
 ├── docker-compose.yaml   # Multi-container setup
 ├── Dockerfile            # Container configuration
-├── graph.png             # Application graph
 ├── LICENSE               # Project license
 ├── main.py               # Application entry point
 ├── README.md             # Project documentation
