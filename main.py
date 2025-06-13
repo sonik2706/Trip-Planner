@@ -405,7 +405,7 @@ def main():
                         st.warning("No itinerary data available")
 
                 with tab4:
-                    create_export_options(results, travel_request)
+                    create_export_options(results, st.session_state.travel_request)
                     pass
 
             else:

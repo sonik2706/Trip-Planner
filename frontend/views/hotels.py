@@ -247,7 +247,7 @@ def display_hotel_card(hotel: Dict, travel_request: TravelRequest):
         with col2:
             price = hotel.get('price', 0)
             currency = hotel.get('currency', 'EUR')
-            st.metric("Price/night", f"{price} {currency}")
+            st.metric("Price", f"{price} {currency}")
             distance = hotel.get('average_distance_km')
             if distance is None:
                 distance = 0
