@@ -56,6 +56,139 @@ def handle_node_update(node_name, node_output, status_text, progress_bar):
 
 def display_hotel_selection():
     """Display hotel selection interface"""
+    # Check if we're processing a hotel selection
+    if getattr(st.session_state, 'processing_hotel_selection', False):
+        # Show only progress bar - no hotel selection interface
+        st.markdown(
+            """
+        <div class="main-header">
+            <h2>🏨 Processing Your Selection</h2>
+            <p>Building your personalized itinerary...</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+        
+        # Get selected hotel from session state
+        hotels = st.session_state.graph_state["hotels"]
+        # Find which hotel was selected (we need to store this in session state)
+        if 'selected_hotel_idx' not in st.session_state:
+            # This shouldn't happen, but fallback to first hotel
+            selected_hotel = hotels[0]
+        else:
+            selected_hotel = hotels[st.session_state.selected_hotel_idx]
+        
+        # Show progress bar and status
+        progress_bar = st.progress(75)
+        status_text = st.empty()
+        status_text.text("🏨 Processing selected hotel...")
+        
+        try:
+            # Create new state with selected hotel
+            continued_state = st.session_state.graph_state.copy()
+            continued_state["selected_hotel"] = selected_hotel
+            
+            # Update progress
+            progress_bar.progress(80)
+            status_text.text("🗓️ Building itinerary...")
+            
+            # Create a new graph instance for the remaining steps
+            app_continue = Graph()
+            
+            # Since we can't resume from interrupt without checkpointer,
+            # we'll manually run the remaining nodes
+            try:
+                # Run wait_for_hotel_selection node manually
+                after_hotel_selection = app_continue._wait_for_hotel_selection(continued_state)
+                
+                progress_bar.progress(90)
+                status_text.text("🗓️ Finalizing itinerary...")
+                
+                # Run build_itinerary node manually  
+                final_state = app_continue._build_itinerary(after_hotel_selection)
+                
+                progress_bar.progress(95)
+                status_text.text("✅ Formatting results...")
+                
+            except Exception as manual_error:
+                st.error(f"Manual execution failed: {manual_error}")
+                
+                # Last resort - try full re-run with selected hotel in initial state
+                initial_with_hotel = {
+                    "country": st.session_state.travel_request.country,
+                    "city": st.session_state.travel_request.city, 
+                    "context": "",
+                    "num_attractions": st.session_state.travel_request.num_attractions,
+                    "hotel_params": continued_state["hotel_params"],
+                    "focus": st.session_state.travel_request.attraction_focus,
+                    "selected_hotel": selected_hotel
+                }
+                
+                # Use simple graph without interrupts
+                simple_graph = app_continue._raw_graph.compile()
+                final_state = simple_graph.invoke(initial_with_hotel)
+            
+            # Format results for frontend
+            try:
+                formatted_results = format_graph_results(final_state, st.session_state.travel_request)
+                
+                # Check if format_graph_results actually failed internally
+                if isinstance(formatted_results, dict) and formatted_results.get("status") != "success":
+                    raise Exception(f"format_graph_results failed: {formatted_results.get('error_message')}")
+                
+            except Exception as format_error:
+                st.error(f"ERROR in format_graph_results: {format_error}")
+                
+                # Create a manual formatted result to bypass the error
+                formatted_results = {
+                    "status": "success",
+                    "attractions": final_state.get("attractions", {}).get("attractions", []),
+                    "hotels": [final_state.get("selected_hotel", {})],
+                    "itinerary": final_state.get("itinerary", {}),
+                    "request": {
+                        "city": final_state.get("city", ""),
+                        "country": final_state.get("country", ""),
+                        "focus": final_state.get("focus", "")
+                    }
+                }
+                st.warning("Used fallback formatting due to error in format_graph_results")
+            
+            # Complete progress
+            progress_bar.progress(100)
+            status_text.text("✅ Itinerary complete!")
+            
+            # Save final results and move to results stage
+            st.session_state.travel_results = formatted_results
+            st.session_state.planning_stage = "results"
+            
+            # Clean up processing flags
+            st.session_state.processing_hotel_selection = False
+            if 'selected_hotel_idx' in st.session_state:
+                del st.session_state.selected_hotel_idx
+            st.session_state.graph_state = None
+            st.session_state.compiled_graph = None
+            
+            # Clear progress indicators before showing results
+            progress_bar.empty()
+            status_text.empty()
+            
+            st.success(f"✅ Selected: {selected_hotel.get('name', 'Hotel')}")
+            st.rerun()
+            
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            # Reset processing flag on error
+            st.session_state.processing_hotel_selection = False
+            if 'selected_hotel_idx' in st.session_state:
+                del st.session_state.selected_hotel_idx
+            st.error(f"❌ Failed to continue planning: {str(e)}")
+            if st.checkbox("Show error details"):
+                st.exception(e)
+        
+        return  # Exit early - don't show hotel selection interface
+    
+    # Show hotel selection interface only if not processing
     st.markdown(
         """
     <div class="main-header">
@@ -95,7 +228,10 @@ def display_hotel_selection():
                 
                 # Add select button directly under each hotel card
                 if st.button(f"Select Hotel {idx + 1}", key=f"select_hotel_{idx}", type="primary", use_container_width=True): 
-                    selected_hotel_idx = idx
+                    # Store selected hotel index and set processing flag
+                    st.session_state.selected_hotel_idx = idx
+                    st.session_state.processing_hotel_selection = True
+                    st.rerun()  # Immediately rerun to show processing interface
                 
                 st.markdown("---")  # Add separator between hotels
         
@@ -103,87 +239,139 @@ def display_hotel_selection():
         if selected_hotel_idx is not None:
             selected_hotel = hotels[selected_hotel_idx]
             
-            with st.spinner("🏨 Continuing with selected hotel..."):
-                try:
-                    # Create new state with selected hotel
-                    continued_state = st.session_state.graph_state.copy()
-                    continued_state["selected_hotel"] = selected_hotel
-                    
-                    # Create a new graph instance for the remaining steps
-                    app_continue = Graph()
-                    
-                    # Since we can't resume from interrupt without checkpointer,
-                    # we'll manually run the remaining nodes
-                    try:
-                        # Run wait_for_hotel_selection node manually
-                        after_hotel_selection = app_continue._wait_for_hotel_selection(continued_state)
-                        
-                        status_text = st.empty()
-                        status_text.text("🗓️ Building itinerary...")
-                        
-                        # Run build_itinerary node manually  
-                        final_state = app_continue._build_itinerary(after_hotel_selection)
-                        
-                        status_text.text("✅ Itinerary complete!")
-                        
-                    except Exception as manual_error:
-                        st.error(f"Manual execution failed: {manual_error}")
-                        
-                        # Last resort - try full re-run with selected hotel in initial state
-                        initial_with_hotel = {
-                            "country": st.session_state.travel_request.country,
-                            "city": st.session_state.travel_request.city, 
-                            "context": "",
-                            "num_attractions": st.session_state.travel_request.num_attractions,
-                            "hotel_params": continued_state["hotel_params"],
-                            "focus": st.session_state.travel_request.attraction_focus,
-                            "selected_hotel": selected_hotel
-                        }
-                        
-                        # Use simple graph without interrupts
-                        simple_graph = app_continue._raw_graph.compile()
-                        final_state = simple_graph.invoke(initial_with_hotel)
-                    
-                    # Format results for frontend
-                    try:
-                        formatted_results = format_graph_results(final_state, st.session_state.travel_request)
-                        
-                        # Check if format_graph_results actually failed internally
-                        if isinstance(formatted_results, dict) and formatted_results.get("status") != "success":
-                            raise Exception(f"format_graph_results failed: {formatted_results.get('error_message')}")
-                        
-                    except Exception as format_error:
-                        st.error(f"ERROR in format_graph_results: {format_error}")
-                        
-                        # Create a manual formatted result to bypass the error
-                        formatted_results = {
-                            "status": "success",
-                            "attractions": final_state.get("attractions", {}).get("attractions", []),
-                            "hotels": [final_state.get("selected_hotel", {})],
-                            "itinerary": final_state.get("itinerary", {}),
-                            "request": {
-                                "city": final_state.get("city", ""),
-                                "country": final_state.get("country", ""),
-                                "focus": final_state.get("focus", "")
-                            }
-                        }
-                        st.warning("Used fallback formatting due to error in format_graph_results")
-                    
-                    # Save final results and move to results stage
-                    st.session_state.travel_results = formatted_results
-                    st.session_state.planning_stage = "results"
-                    
-                    # Clean up intermediate states
-                    st.session_state.graph_state = None
-                    st.session_state.compiled_graph = None
-                    
-                    st.success(f"✅ Selected: {selected_hotel.get('name', 'Hotel')}")
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"❌ Failed to continue planning: {str(e)}")
-                    if st.checkbox("Show error details"):
-                        st.exception(e)
+            # Set processing flag to hide hotel selection interface
+            st.session_state.processing_hotel_selection = True
+            st.rerun()  # Immediately rerun to hide hotel selection
+            
+    # Show processing interface when hotel is being processed
+    if getattr(st.session_state, 'processing_hotel_selection', False):
+        # Show only progress bar - no hotel selection interface
+        st.markdown(
+            """
+        <div class="main-header">
+            <h2>🏨 Processing Your Selection</h2>
+            <p>Building your personalized itinerary...</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+        
+        # Get selected hotel from session state
+        hotels = st.session_state.graph_state["hotels"]
+        # Find which hotel was selected (we need to store this in session state)
+        if 'selected_hotel_idx' not in st.session_state:
+            # This shouldn't happen, but fallback to first hotel
+            selected_hotel = hotels[0]
+        else:
+            selected_hotel = hotels[st.session_state.selected_hotel_idx]
+        
+        # Show progress bar and status
+        progress_bar = st.progress(75)
+        status_text = st.empty()
+        status_text.text("🏨 Processing selected hotel...")
+            
+        try:
+            # Create new state with selected hotel
+            continued_state = st.session_state.graph_state.copy()
+            continued_state["selected_hotel"] = selected_hotel
+            
+            # Update progress
+            progress_bar.progress(80)
+            status_text.text("🗓️ Building itinerary...")
+            
+            # Create a new graph instance for the remaining steps
+            app_continue = Graph()
+            
+            # Since we can't resume from interrupt without checkpointer,
+            # we'll manually run the remaining nodes
+            try:
+                # Run wait_for_hotel_selection node manually
+                after_hotel_selection = app_continue._wait_for_hotel_selection(continued_state)
+                
+                progress_bar.progress(90)
+                status_text.text("🗓️ Finalizing itinerary...")
+                
+                # Run build_itinerary node manually  
+                final_state = app_continue._build_itinerary(after_hotel_selection)
+                
+                progress_bar.progress(95)
+                status_text.text("✅ Formatting results...")
+                
+            except Exception as manual_error:
+                st.error(f"Manual execution failed: {manual_error}")
+                
+                # Last resort - try full re-run with selected hotel in initial state
+                initial_with_hotel = {
+                    "country": st.session_state.travel_request.country,
+                    "city": st.session_state.travel_request.city, 
+                    "context": "",
+                    "num_attractions": st.session_state.travel_request.num_attractions,
+                    "hotel_params": continued_state["hotel_params"],
+                    "focus": st.session_state.travel_request.attraction_focus,
+                    "selected_hotel": selected_hotel
+                }
+                
+                # Use simple graph without interrupts
+                simple_graph = app_continue._raw_graph.compile()
+                final_state = simple_graph.invoke(initial_with_hotel)
+            
+            # Format results for frontend
+            try:
+                formatted_results = format_graph_results(final_state, st.session_state.travel_request)
+                
+                # Check if format_graph_results actually failed internally
+                if isinstance(formatted_results, dict) and formatted_results.get("status") != "success":
+                    raise Exception(f"format_graph_results failed: {formatted_results.get('error_message')}")
+                
+            except Exception as format_error:
+                st.error(f"ERROR in format_graph_results: {format_error}")
+                
+                # Create a manual formatted result to bypass the error
+                formatted_results = {
+                    "status": "success",
+                    "attractions": final_state.get("attractions", {}).get("attractions", []),
+                    "hotels": [final_state.get("selected_hotel", {})],
+                    "itinerary": final_state.get("itinerary", {}),
+                    "request": {
+                        "city": final_state.get("city", ""),
+                        "country": final_state.get("country", ""),
+                        "focus": final_state.get("focus", "")
+                    }
+                }
+                st.warning("Used fallback formatting due to error in format_graph_results")
+            
+            # Complete progress
+            progress_bar.progress(100)
+            status_text.text("✅ Itinerary complete!")
+            
+            # Save final results and move to results stage
+            st.session_state.travel_results = formatted_results
+            st.session_state.planning_stage = "results"
+            
+            # Clean up processing flags
+            st.session_state.processing_hotel_selection = False
+            if 'selected_hotel_idx' in st.session_state:
+                del st.session_state.selected_hotel_idx
+            st.session_state.graph_state = None
+            st.session_state.compiled_graph = None
+            
+            # Clear progress indicators before showing results
+            progress_bar.empty()
+            status_text.empty()
+            
+            st.success(f"✅ Selected: {selected_hotel.get('name', 'Hotel')}")
+            st.rerun()
+            
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            # Reset processing flag on error
+            st.session_state.processing_hotel_selection = False
+            if 'selected_hotel_idx' in st.session_state:
+                del st.session_state.selected_hotel_idx
+            st.error(f"❌ Failed to continue planning: {str(e)}")
+            if st.checkbox("Show error details"):
+                st.exception(e)
     else:
         st.error("No hotel data available. Please start over.")
         if st.button("🔄 Start Over"):
